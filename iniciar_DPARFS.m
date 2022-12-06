@@ -13,6 +13,7 @@ addpath dicm2
 
 cd /home/triniibar/
 addpath /home/triniibar/DPABI_V6.2_220915
+addpath(genpath('/home/triniibar/DPABI_V6.2_220915'))
 cd DPABI_V6.2_220915/
 addpath DPARSF
 addpath Analysis
