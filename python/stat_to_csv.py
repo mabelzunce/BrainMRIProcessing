@@ -66,17 +66,19 @@ def brainvol_to_csv(file, name_new_file):
 
 
 def create_csvs(subject):
-    subjects_dir_stats = "/usr/local/freesurfer/7.3.2/subjects/" + subject + "/stats"
+    subjects_dir_stats = "/home/sol/COVID/subjects/" + subject + "/stats"
 
     path_aseg = subjects_dir_stats + "/aseg.stats"
     path_lh_aparc = subjects_dir_stats + "/lh.aparc.stats"
     path_rh_aparc = subjects_dir_stats + "/lh.aparc.stats"
     path_brainvol = subjects_dir_stats + "/brainvol.stats"
 
-    if not os.path.exists(subject):  # create path of subject
-        os.makedirs(subject)
+    subject_path = os.path.join("/home/sol/COVID/CSV_subjects/", subject)
 
-    common_path = subject + '/' + subject
+    if not os.path.exists(subject_path):  # create path of subject
+        os.makedirs(subject_path)
+
+    common_path = "/home/sol/COVID/CSV_subjects/" + subject + '/' + subject
 
     aseg_to_csv(path_aseg, common_path + '_aseg.csv')
     aparc_to_csv(path_lh_aparc, common_path + '_lh_aparc.csv')
@@ -87,9 +89,13 @@ def create_csvs(subject):
 
 
 if __name__ == '__main__':
+    path = "/home/sol/COVID/subjects/"
 
-    if len(sys.argv) > 0:
+    if len(sys.argv) > 1:
         subjects = sys.argv[1::]
+    else:
+        print(os.listdir(path))
+        subjects = [f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))]  # list of subjects
 
-        for subject in subjects:
-            create_csvs(subject)
+    for subject in subjects:
+        create_csvs(subject)
