@@ -3,7 +3,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import os
 
-
 def brainvol_new_subject_to_df(df, path_subject, name_subject="Unknown"):
     """Append a row with the information of the subject to the dataframe"""
 
@@ -46,13 +45,13 @@ def make_boxplot_brain_volumes(regions, ax, fontsize=12, widths=0.15, plot_title
 
 if __name__ == '__main__':
 
-    path = r"C:\Users\ecyt\Documents\Sol\CovidMRI\stats\subjects"
+    path = "/home/sol/COVID/CSV_subjects"
     subjects = [f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))]  # list of subjects
 
     df = pd.DataFrame()  # empty dataframe
 
     for subject in subjects:
-        file = f'{subject}\{subject}_brainvol.csv'
+        file = f'{subject}/{subject}_brainvol.csv'
         new_path = os.path.join(path, file)  # path of csv file
         df = brainvol_new_subject_to_df(df, new_path, name_subject=subject)
 
@@ -75,7 +74,7 @@ if __name__ == '__main__':
 
     # statistics
     metrics = df.describe()
-    print(metrics)
-    metrics.to_csv("metrics.csv")
+
+    metrics.to_csv(path + "/metrics.csv")
 
     plt.show()
