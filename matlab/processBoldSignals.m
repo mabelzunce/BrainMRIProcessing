@@ -35,6 +35,8 @@ for i = 1 : adBatches
     adTotalSubjects = adTotalSubjects + cantSubjects;
     % Process each subject:
     for s = 1 : cantSubjects
+        adLengthBoldSignals(j) = size(adBatch.S(:,:,s),1);
+        adBoldSignals(1:adLengthBoldSignals(j),:,j) = adBatch.S(:,:,s);
         adCrossCorr(:,:,j) = corr(adBatch.S(:,:,s));
         j = j + 1;
     end
@@ -69,6 +71,8 @@ for i = 1 : cnBatches
     cnTotalSubjects = cnTotalSubjects + cantSubjects;
     % Process each subject:
     for s = 1 : cantSubjects
+        cnLengthBoldSignals(j) = size(cnBatch.S(:,:,s),1);
+        cnBoldSignals(1:cnLengthBoldSignals(j),:,j) = cnBatch.S(:,:,s);
         cnCrossCorr(:,:,j) = corr(cnBatch.S(:,:,s));
         j = j + 1;
     end
@@ -119,3 +123,15 @@ cnVecMeanCCfilt = filter(coeffFilter, 1, cnVecMeanCC);
 figure;
 plot(vecDistance, adVecMeanCCfilt, vecDistance, cnVecMeanCCfilt)
 legend('AD', 'CN')
+%% SAVE DATA
+cnData.boldSignals = cnBoldSignals;
+cnData.boldRoisCorr = cnCrossCorr;
+cnData.boldLength = cnLengthBoldSignals;
+cnData.boldNumSubjects = cnTotalSubjects;
+save([boldPath 'cnData.mat'], 'cnData');
+
+adData.boldSignals = adBoldSignals;
+adData.boldRoisCorr = adCrossCorr;
+adData.boldLength = adLengthBoldSignals;
+adData.boldNumSubjects = adTotalSubjects;
+save([boldPath 'adData.mat'], 'adData');

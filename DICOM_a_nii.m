@@ -1,6 +1,6 @@
 %% convertir todo el dicom a nii
 
-Files = dir('/home/triniibar/Documents/I_parametros_AD/FunRaw/');
+Files = dir('F:\Test\FunRaw\');
 % aca se escribe el directorio donde estan las DICOM de TODOS los subjects
 % este dir tiene que tener subcarpetas para cada sub
 
@@ -8,10 +8,10 @@ for sub=1:length(Files)
     ext = string(Files(sub).name) ; % extension del archivo
     if (ext~= '.') && (ext~= '..')
         
-        path_DICOM = strcat( '/home/triniibar/Documents/I_parametros_AD/FunRaw/', string(ext));
+        path_DICOM = strcat( 'F:\Test\FunRaw\', string(ext));
         % el path de la carpeta con los archivos DICOM
         
-        path_nii = strcat( '/home/triniibar/Documents/I_parametros_AD/FunImg/', string(ext));
+        path_nii = strcat( 'F:\Test\FunImg\', string(ext));
         % el path donde se van a guardar las iamgebes nii
         
         varargout = dicm2nii(path_DICOM, path_nii, 0) ;

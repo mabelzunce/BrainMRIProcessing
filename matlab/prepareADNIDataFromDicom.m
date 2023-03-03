@@ -8,13 +8,16 @@ addpath('D:\UNSAM\Brain\spm12\spm12\')
 addpath('D:\UNSAM\Brain\DPABI_V6.2_220915\DPARSF')
 
 %% PATHS AND FILENAMES
-overwriteNifti = 0; % If 0 won't process existing Nfiti data in the DPARSF folder
+overwriteNifti = 1; % If 0 won't process existing Nfiti data in the DPARSF folder
 format = '.nii.gz';
 dcmHeadersFilename = 'dcmHeaders.mat';
-adniPath = 'D:/ADNIdata/';
+adniPath = 'F:/ADNIdata/';
 dataPath = [adniPath '/ADNIdicom/'];
 
-outputPath = 'D:/ADNIdata/Processed/';
+dparsfConfigFilenamesPerManufacturer = {'D:\UNSAM\CEMSC3\ProcesamientoADNI\DPARFS\DPARSF_config_siemens.mat', 'D:\UNSAM\CEMSC3\ProcesamientoADNI\DPARFS\DPARSF_config_ge.mat',...
+    'D:\UNSAM\CEMSC3\ProcesamientoADNI\DPARFS\DPARSF_config_philips.mat'};
+
+outputPath = 'F:/ADNIdata/Processed/';
 dparsfPath = [outputPath '/DPARSF/'];
 niftiPath = [outputPath '/Nifti/'];
 if ~isdir(dparsfPath)
@@ -32,7 +35,7 @@ adniCollectionData = readtable([adniPath filenameADNICollection]);
 %% LOAD PREVIOUS RUN
 % If didn't finish processing, load the workspace and to cntinue from the
 % PROCESS EACH CASE cell changing the i index.
-load([outputPath 'workspaceProcessingScript.mat'])
+%load([outputPath 'workspaceProcessingScript.mat'])
 %% NAME SEQUENCES
 nameT1 = 't1_mprage_1x1x1';
 nameRsFmri = {'Axial_rsfMRI', 'Axial_fcMRI'};
@@ -199,52 +202,56 @@ for i = 1 : numel(casesToProcess)
         dcmTagsTemp = dicm2nii(pathRsFmri{i}, niftiPathThisSubject, format);
     end
     %% GET DATA FROM DICOM
-    dcmTags{i} = load([niftiPathThisSubject dcmHeadersFilename]);
-    niftiFilesThisSubejct = fieldnames(dcmTags{i}.h); % Get all the nifti files converted, it should be only one.
-    niftiRsFmriFilenames{i} = niftiFilesThisSubejct{1};
-    dcmTagsRsFmri{i} = getfield(dcmTags{i}.h, niftiRsFmriFilenames{i});
-    voxelSize_mm(i,:) = [dcmTagsRsFmri{i}.PixelSpacing' dcmTagsRsFmri{i}.SliceThickness];
-    imageSize_mm(i,:) = [dcmTagsRsFmri{i}.Rows dcmTagsRsFmri{i}.Columns dcmTagsRsFmri{i}.LocationsInAcquisition]; 
-    tRs(i) = dcmTagsRsFmri{i}.RepetitionTime;
-    scannerManufacturer{i} = dcmTagsRsFmri{i}.Manufacturer;
-    scannerModel{i} = dcmTagsRsFmri{i}.ManufacturerModelName;
-    if strncmpi(scannerManufacturer{i}, 'Philips', numel('Philips'))
-        % Philips does not include slice order, by defaults:
-        numSlices = imageSize_mm(3);
-        sliceOrder{i} = [1:2:numSlices 2:2:numSlices];
+    if exist([niftiPathThisSubject dcmHeadersFilename])
+        dcmTags{i} = load([niftiPathThisSubject dcmHeadersFilename]);
+        niftiFilesThisSubejct = fieldnames(dcmTags{i}.h); % Get all the nifti files converted, it should be only one.
+        niftiRsFmriFilenames{i} = niftiFilesThisSubejct{1};
+        dcmTagsRsFmri{i} = getfield(dcmTags{i}.h, niftiRsFmriFilenames{i});
+        voxelSize_mm(i,:) = [dcmTagsRsFmri{i}.PixelSpacing' dcmTagsRsFmri{i}.SliceThickness];
+        imageSize_mm(i,:) = [dcmTagsRsFmri{i}.Rows dcmTagsRsFmri{i}.Columns dcmTagsRsFmri{i}.LocationsInAcquisition]; 
+        tRs(i) = dcmTagsRsFmri{i}.RepetitionTime;
+        scannerManufacturer{i} = dcmTagsRsFmri{i}.Manufacturer;
+        scannerModel{i} = dcmTagsRsFmri{i}.ManufacturerModelName;
+        
+        if isfield(dcmTagsRsFmri{i}, 'PatientAge')
+            dcmAge_years(i) = str2num(dcmTagsRsFmri{i}.PatientAge(1:end-1));
+        else
+            dcmAge_years(i) = 0;
+        end
+        if isfield(dcmTagsRsFmri{i}, 'PatientSex')
+            dcmSex(i) = dcmTagsRsFmri{i}.PatientSex;
+        else
+            dcmSex(i) = 'N';
+        end
+        image = niftiread([niftiPathThisSubject niftiRsFmriFilenames{i}]);
+        imageRealSize_voxels(i,:) = size(image);
+        timePoints(i) = size(image,4);
+        if strncmpi(scannerManufacturer{i}, 'Philips', numel('Philips'))
+            % Philips does not include slice order, by defaults:
+            numSlices = imageRealSize_voxels(i,3);
+            sliceOrder{i} = [1:2:numSlices 2:2:numSlices];
+        else
+            [sortedTimes, sortedIndices] = sort(dcmTagsRsFmri{i}.SliceTiming);
+            sliceOrder{i} = sortedIndices(end:-1:1)';
+        end
+        %% CREATE FOLDERS FOR THIS SUBJECT DPARSF AND COPY FILES
+        %t1DparsfPathThisSubject = [t1DparsfPath '/' casesToProcess{i} '/'];
+        %% CHECK IF DATA ALREADY THERE
+        fmriDparsfPathThisSubject = [fmriDparsfPath '/' casesToProcess{i} '/'];
+        if ~exist([fmriDparsfPathThisSubject niftiRsFmriFilenames{i} format]) || overwriteNifti
+            %fieldmapMagDparsfPathThisSubject = [fieldmapMagDparsfPath '/' casesToProcess{i} '/'];
+            %fieldmapPhaseDparsfPathThisSubject = [fieldmapPhaseDparsfPath '/' casesToProcess{i} '/'];
+            %mkdir(t1DparsfPathThisSubject);
+            %copyfile([niftiPath nameT1 format], t1DparsfPathThisSubject);
+            mkdir(fmriDparsfPathThisSubject);
+            copyfile([niftiPathThisSubject niftiRsFmriFilenames{i} format], fmriDparsfPathThisSubject);
+            %mkdir(fieldmapMagDparsfPathThisSubject);
+            %copyfile([niftiPath nameFieldmappingMag1 format], fieldmapMagDparsfPathThisSubject);
+            %mkdir(fieldmapPhaseDparsfPathThisSubject);
+            %copyfile([niftiPath nameFieldmappingPhase format], fieldmapPhaseDparsfPathThisSubject);
+        end
     else
-        [sortedTimes, sortedIndices] = sort(dcmTagsRsFmri{i}.SliceTiming);
-        sliceOrder{i} = sortedIndices(end:-1:1)';
-    end
-    if isfield(dcmTagsRsFmri{i}, 'PatientAge')
-        dcmAge_years(i) = str2num(dcmTagsRsFmri{i}.PatientAge(1:end-1));
-    else
-        dcmAge_years(i) = 0;
-    end
-    if isfield(dcmTagsRsFmri{i}, 'PatientSex')
-        dcmSex(i) = dcmTagsRsFmri{i}.PatientSex;
-    else
-        dcmSex(i) = 'N';
-    end
-    image = niftiread([niftiPathThisSubject niftiRsFmriFilenames{i}]);
-    imageRealSize_mm(i,:) = size(image);
-    timePoints(i) = size(image,4);
-    
-    %% CREATE FOLDERS FOR THIS SUBJECT DPARSF AND COPY FILES
-    %t1DparsfPathThisSubject = [t1DparsfPath '/' casesToProcess{i} '/'];
-    %% CHECK IF DATA ALREADY THERE
-    fmriDparsfPathThisSubject = [fmriDparsfPath '/' casesToProcess{i} '/'];
-    if ~exist([fmriDparsfPathThisSubject niftiRsFmriFilenames{i} format]) || overwriteNifti
-        %fieldmapMagDparsfPathThisSubject = [fieldmapMagDparsfPath '/' casesToProcess{i} '/'];
-        %fieldmapPhaseDparsfPathThisSubject = [fieldmapPhaseDparsfPath '/' casesToProcess{i} '/'];
-        %mkdir(t1DparsfPathThisSubject);
-        %copyfile([niftiPath nameT1 format], t1DparsfPathThisSubject);
-        mkdir(fmriDparsfPathThisSubject);
-        copyfile([niftiPathThisSubject niftiRsFmriFilenames{i} format], fmriDparsfPathThisSubject);
-        %mkdir(fieldmapMagDparsfPathThisSubject);
-        %copyfile([niftiPath nameFieldmappingMag1 format], fieldmapMagDparsfPathThisSubject);
-        %mkdir(fieldmapPhaseDparsfPathThisSubject);
-        %copyfile([niftiPath nameFieldmappingPhase format], fieldmapPhaseDparsfPathThisSubject);
+        warning([niftiPathThisSubject ': Could not be converted to Nifti']);
     end
 end
 %% READ SOME ADDITIONAL DATA FROM THE HEADERS
@@ -273,9 +280,9 @@ end
 %     h.gre_field_mapping_2mm_e2.EchoTime, h.gre_field_mapping_2mm_e1.deltaTE);
 
 %% SAVE DATA
-%save([outputPath 'workspaceProcessingScript']);
+save([outputPath 'workspaceProcessingScript']);
 %% CREATE SPECFIC DPARSF FOLDERS FOR GROUPS
-dparsfPerGroupPath = ['F:/DPARSFgroups/'];
+dparsfPerGroupPath = [outputPath '/DPARSFgroups/'];
 % Divide them by scanner as they have different parameters.
 % SIEMENS, same image size:
 groups = {'AD', 'CN', 'MCI', 'EMCI', 'LMCI'};
@@ -285,6 +292,9 @@ for s = 1 : numel(scanners)
         dparsfThisGroupPath = [dparsfPerGroupPath groups{g} '_' scanners{s} '/' fmriNameNifti '/'];
         mkdir(dparsfThisGroupPath);        
         indicesSubgroup = find( (strncmp(scanners{s}, scannerManufacturer,2) & strcmp(group, groups{g})) >0);
+        spm_orderSubgroup{s,g} =  spm_order(indicesSubgroup);
+        imageRealSizePerGroup_voxels{s,g} = imageRealSize_voxels(indicesSubgroup,:);
+        timePointsPerGroup{s,g} = timePoints(indicesSubgroup);
         for i = indicesSubgroup
             niftiPathThisSubject = [niftiPath casesToProcess{i} '/'];
             fmriDparsfPathThisSubject = [dparsfThisGroupPath '/' casesToProcess{i} '/'];
@@ -294,7 +304,65 @@ for s = 1 : numel(scanners)
     end
 end
 
+%% CHECK DATA FOR CONFIG
+% Check slice order and number of slices for each manufacturer:
+for s = 1 : numel(scanners)
+    indicesDifferentPerManufacturer{s} = [];
+
+    indicesManufacturer = find( strncmp(scanners{s}, scannerManufacturer,2) >0);
+    spm_orderManufacturer{s} =  spm_order(indicesManufacturer);
+    imageRealSizeManufacturer_voxels{s} = imageRealSize_voxels(indicesManufacturer,:);
+    timePointsManufacturer{s} = timePoints(indicesManufacturer);
+    sliceOrderManufacturer{s} =  sliceOrder(indicesManufacturer);
+    % Check if all time points for this manufacturer are the same:
+    if unique(timePointsManufacturer{s})
+        timePointsPerManufacturer(s) = timePointsManufacturer{s}(1);
+    else
+        warning(sprintf('Not all of the fMRI scans have the same time points for %s manufacturer', scanners{s}))
+    end
+%     if unique(spm_orderManufacturer{s})
+%         spmOrderPerManufacturer{s} = spm_orderManufacturer{s}{1};
+%     else
+%         warning(sprintf('Not all of the fMRI scans have the same time slice order for %s manufacturer', scanners{s}))
+%     end
+    j = 0;
+    for i = 1 : numel(sliceOrderManufacturer{s})
+        if(numel(sliceOrderManufacturer{s}{1}) == numel(sliceOrderManufacturer{s}{i}))
+            if all(sliceOrderManufacturer{s}{1} == sliceOrderManufacturer{s}{i})
+                j = j + 1;
+            else
+                indicesDifferentPerManufacturer{s} = [indicesDifferentPerManufacturer{s} indicesManufacturer(i)];
+            end
+        else
+            indicesDifferentPerManufacturer{s} = [indicesDifferentPerManufacturer{s} indicesManufacturer(i)];
+        end
+    end
+    if j == numel(sliceOrderManufacturer{s})
+        sliceOrderPerManufacturer{s} = sliceOrderManufacturer{s}{1};
+    else
+        if numel(indicesDifferentPerManufacturer{s}) < j % If different are few
+            sliceOrderPerManufacturer{s} = sliceOrderManufacturer{s}{1};
+        else    % i == 1 is the different.
+            sliceOrderPerManufacturer{s} = sliceOrderManufacturer{s}{indicesDifferentPerManufacturer{s}(1)};
+        end
+        warning(sprintf('%d of the fMRI scans have a different time slice order for %s manufacturer', numel(sliceOrderManufacturer{s})-j, scanners{s}))
+    end
+end
 %% RUN DPARSF
-
-
+% Process each folder using the respective config file.
+for s = 1 : numel(scanners)
+    configThisManufacturer = load(dparsfConfigFilenamesPerManufacturer{s});
+    for g = 1 : numel(groups)
+        dparsfThisGroupBasePath = [dparsfPerGroupPath groups{g} '_' scanners{s} '/'];
+        dparsfThisGroupFunPath = [dparsfThisGroupBasePath fmriNameNifti '/'];
+        listDir = dir(dparsfThisGroupFunPath);
+        subjectNames = listDir(3:end); % Remove ., ..
+        configThisManufacturer.Cfg.WorkingDir = dparsfThisGroupBasePath;
+        configThisManufacturer.Cfg.DataProcessDir = dparsfThisGroupBasePath;
+        configThisManufacturer.Cfg.SubjectID = {subjectNames(:).name};
+        configThisManufacturer.Cfg.SubjectNum = numel(subjectNames);
+        configThisManufacturer.Cfg.IsNeedReorientFunImgInteractively = 0; % Do not reorient manually.
+        [Error]=DPARSF_run(configThisManufacturer.Cfg);
+    end
+end
 
