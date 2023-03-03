@@ -1,71 +1,62 @@
 import csv
 
-path_fscolorlut = "/home/sol/COVID/atlas/LUT_txt/FreeSurferColorLUT.txt"
-path_asegstatslut = "/home/sol/COVID/atlas/LUT_txt/ASegStatsLUT.txt"
 
-segmentation = {}
-parcellation_DK_atlas = {}
-parcellation_Des_atlas = {}
+def extract_labels(file, start, end):
+    """Read file, extract labels from START to END """
 
-# segmentation
-with open(path_asegstatslut, 'r') as f:
-    lines = f.readlines()
+    labels = {}
+    with open(file, 'r') as f:
+        lines = f.readlines()
 
-    for line in lines:
-        line = line.strip().split()
+        for line in lines:
+            line = line.strip().split()
 
-        if line:  # convert to int the number of label
-            try:
-                n_label = int(line[0])
-                name_label = line[1]
+            if line:  # convert to int the number of label
+                try:
+                    n_label = int(line[0])
+                    name_label = line[1]
 
-                # segmentation
-                if n_label >= 2 and n_label <= 255:
-                    segmentation[n_label] = name_label
+                    # segmentation
+                    if start <= n_label <= end:
+                        labels[n_label] = name_label
 
-            except ValueError:
-                pass
+                except ValueError:
+                    pass
+
+    return labels
 
 
-# parcellation
-with open(path_fscolorlut, 'r') as f:
-    lines = f.readlines()
 
-    for line in lines:
-        line = line.strip().split()
 
-        if line: # convert to int the number of label
-            try:
-                n_label = int(line[0])
-                name_label = line[1]
+if __name__ == '__main__':
+    path_fscolorlut = "/home/sol/COVID/atlas/LUT_txt/FreeSurferColorLUT.txt"
+    path_asegstatslut = "/home/sol/COVID/atlas/LUT_txt/ASegStatsLUT.txt"
 
-                # parcellation DK atlas
-                if n_label >= 1000 and n_label <= 1035:
-                    parcellation_DK_atlas[n_label] = name_label
+    segmentation = extract_labels(path_asegstatslut, 2, 255)
+    parcellation_DK_atlas = extract_labels(path_fscolorlut, 1000, 2035)
+    parcellation_Des_atlas = extract_labels(path_fscolorlut, 11100, 12175)
 
-                # parcellation Des atlas
-                if n_label >= 11100 and n_label <= 12175:
-                    parcellation_Des_atlas[n_label] = name_label
+    # write csv
+    path_labels_csv = "/home/sol/COVID/atlas/labels.csv"
 
-            except ValueError:
-                pass
-# write csv
-path_labels_csv = "/home/sol/COVID/atlas/labels.csv"
+    with open(path_labels_csv, 'w') as file:
+        csv_writer = csv.writer(file)
 
-with open(path_labels_csv, 'w') as file:
-    csv_writer = csv.writer(file)
+        # headers
+        headers = ['n_label', 'structure', 'atlas']
+        csv_writer.writerow(headers)
 
-    # segmentation rows
-    for label in segmentation:
-        row = [label, segmentation[label], 'segmentation']
-        csv_writer.writerow(row)
+        # segmentation rows
+        for label in segmentation:
+            row = [label, segmentation[label], 'segmentation']
+            csv_writer.writerow(row)
 
-    # parcellation DK rows
-    for label in parcellation_DK_atlas:
-        row = [label, parcellation_DK_atlas[label], 'parcellation_DK_atlas']
-        csv_writer.writerow(row)
+        # parcellation DK rows
+        for label in parcellation_DK_atlas:
+            row = [label, parcellation_DK_atlas[label], 'parcellation_DK_atlas']
+            csv_writer.writerow(row)
 
-    # parcellation Des rows
-    for label in parcellation_Des_atlas:
-        row = [label, parcellation_Des_atlas[label], 'parcellation_Des_atlas']
-        csv_writer.writerow(row)
+        # parcellation Des rows
+        for label in parcellation_Des_atlas:
+            row = [label, parcellation_Des_atlas[label], 'parcellation_Des_atlas']
+            csv_writer.writerow(row)
