@@ -1,5 +1,4 @@
 %% APLICAR ATLAS 
-% falta encontrar ROI LH y RH
 clear all 
 close all 
 clc
@@ -9,15 +8,13 @@ firstCovThenStats = 1; % if 1, first the COV matrices are computed and then the 
 %0, mean signals and the CC matrices.
 
 
-%% cargas la informacion del atlas
+%% carga la informacion del atlas
 
 cd /home/triniibar/Documents/codigos_para_armar_la_database/
 ATLAS = load('DSI_enhanced.mat');
 path = '/home/triniibar/Desktop/Corregidos/998ROI/matrices/' ;
 
 %% Declaro las variables utiles
-
-% todos las variables CIJ tienen son del conectoma
 
 ROIlabels = 1:998 ;
 
@@ -39,6 +36,7 @@ M_distROI = sqrt(sum((M_ROIcentroids-permute(M_ROIcentroids, [2 1 3])).^2,3));
 
 
 %% Procesar las Señales AD
+% empieza a partir de los archivos matrices de todos los subjects
 
 % long ROI Signals
 Signals = load(strcat(path,'M_longRoiSignals_AD.mat')) ;
@@ -92,20 +90,10 @@ whos longMcorr
 whos shortMcorr
 
 
-%% GUARDAR
-% 
-% cd /home/triniibar/Desktop/
-% 
-% save ('AD_original_ROICorrelation.mat' , 'AD_M_CorrelacionROI');
-% disp('se guardo el archivo') ;
-% 
-% save ('CN_original_ROICorrelation.mat' , 'CN_M_CorrelacionROI');
-% disp('se guardo el archivo') ;
-
 
 %% ESTADISTICAS
 
-%AD
+% AD
 % el valor medio de la correlacion entre ROI1 y ROI2 
 % ( y asi para las 116x116 combinaciones entre ROI)
 % promediando entre los 55 subjects
@@ -150,7 +138,7 @@ CN_Vec_media = CN_Vec_media(posicion_en_vector);
 
 
 
-%% FILTRO PORQUE EL GRAFICO DA HORRIBLE
+%% FILTRO 
 filterSize = 80;
 coeffFilter = ones(1, filterSize)/filterSize;
 
@@ -210,7 +198,7 @@ for roi = 1: 998
         disp(texto);
     % si no esta ni en L ni en R
     else
-         disp('idk,salio mal el loop')
+         disp('algo salio mal');
     end
 
 end 
