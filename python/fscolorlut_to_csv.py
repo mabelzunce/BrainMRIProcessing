@@ -56,7 +56,7 @@ if __name__ == '__main__':
             row = [label, parcellation_DK_atlas[label], 'parcellation_DK_atlas']
             csv_writer.writerow(row)
 
-        # parcellation Des rows
+        # parcellation Destrieux rows
         for label in parcellation_Des_atlas:
-            row = [label, parcellation_Des_atlas[label], 'parcellation_Des_atlas']
+            row = [label, parcellation_Des_atlas[label], 'parcellation_Destrieux_atlas']
             csv_writer.writerow(row)
