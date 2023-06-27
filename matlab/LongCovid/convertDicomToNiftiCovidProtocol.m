@@ -5,6 +5,8 @@ dataPartitionPath = '/data/'; %'D:/'
 adniPartitionPath = '/data_imaging/'; %'F:/'
 % Load data:
 loadData = 1;
+% Overwrite Nifti:
+overwriteNifti = 0; % 0: if nifti conversion exists, just reads the images and headers, 1: covnerts and overwrites again
 %% ADD PATHS
 addpath([dataPartitionPath 'UNSAM/Brain/dicm2nii/'])
 addpath(genpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/']))
@@ -88,7 +90,9 @@ for i = 1 : numel(casesToProcess)
     %% CONVERT DICOM TO NIFTI
     niftiPathThisSubject = [niftiDataPath casesToProcess{i} '/'];
     dicomPathThisSubject = [dicomDataPath casesToProcess{i}];
-    converterOut = dicm2nii(dicomPathThisSubject, niftiPathThisSubject, niftiExtension);
+    if ~exist(niftiPathThisSubject) || overwriteNifti
+        converterOut = dicm2nii(dicomPathThisSubject, niftiPathThisSubject, niftiExtension);
+    end    
     dcmTags{i} = load([niftiPathThisSubject dcmHeadersFilename]);
 %     %% CREATE FOLDERS FOR MELODIC
 %     melodicPath = [pathThisSubject '/Nifti/'];
@@ -175,6 +179,9 @@ for i = 1 : numel(casesToProcess)
             dti_imageSize_voxels(i,j,1:numel(info.ImageSize)) = info.ImageSize; % It can be 3D and 4D.
             dti_voxelSize_mm(i,j,1:numel(info.PixelDimensions)) = info.PixelDimensions;
             dti_unwarpDirection{i}{j} = dcmTagsDti{i}{j}.UnwarpDirection;
+            dti_inPlanePhaseEncoding{i}{j} = dcmTagsDti{i}{j}.InPlanePhaseEncodingDirection;
+            dti_inPlanePhaseEncodingPositive{i}(j) = dcmTagsDti{i}{j}.CSAImageHeaderInfo.PhaseEncodingDirectionPositive;
+            dti_diffusionGradientDirection{i}{j} = dcmTagsDti{i}{j}.CSAImageHeaderInfo.DiffusionGradientDirection;
             dti_tR{i}{j} = dcmTagsDti{i}{j}.RepetitionTime;
             dti_tE1{i}{j} = dcmTagsDti{i}{j}.EchoTime;
         catch exc
@@ -229,6 +236,16 @@ tableFieldMapping = table(casesToProcess', permute(fieldMapping_voxelSize_mm(:,1
     permute(fieldMapping_imageSize_voxels(:,1,:), [1 3 2]), fieldMapping_tR(:,1,:), ...
     fieldMapping_tE(:,1:2,:), fieldMapping_deltaTE(:,1,:), fieldMapping_unwarpDirection');
 writetable(tableFieldMapping, [preprocessedDataPath 'fieldMapping_parameters' ])
+%% RUN FREESURFER
+%freesurferLines = [freesurferLines 'recon-all -subject '];
+for i = 1 : numel(casesToProcess)
+    freesurferLines = [freesurferLines 'recon-all -subject ' casesToProcess{i} ' -all \n'];
+end
+%freesurferLines = [freesurferLines ' -all\n'];
+% If in windows, save the script and run it later in Ubuntu for windows:
+fid = fopen(filenameFreesurferScript,'w');
+fprintf(fid, freesurferLines);
+fclose(fid);
 %% PREPROCESSING fMRI WITH FSL
 
 for i = 1 : numel(casesToProcess)
@@ -251,16 +268,7 @@ fsl_prepare_fieldmap SIEMENS images_3_gre_field_mapping images_4_gre_field_mappi
 % h.gre_field_mapping_2mm_e1.deltaTE
 fprintf('Parameters for fieldmap correction. TE1:%.1fms, TE2:%.1fms, dTE:%.1fms\n', h.gre_field_mapping_2mm_e1.EchoTime, ...
     h.gre_field_mapping_2mm_e2.EchoTime, h.gre_field_mapping_2mm_e1.deltaTE);
-%% RUN FREESURFER
-freesurferLines = [freesurferLines 'recon-all -subject '];
-for i = 1 : numel(casesToProcess)
-    freesurferLines = [freesurferLines 'recon-all -subject ' casesToProcess{i} ' -all \n'];
-end
-freesurferLines = [freesurferLines ' -all\n'];
-% If in windows, save the script and run it later in Ubuntu for windows:
-fid = fopen(filenameFreesurferScript,'w');
-fprintf(fid, freesurferLines);
-fclose(fid);
+
 %% RUN DPARSF
 
 
