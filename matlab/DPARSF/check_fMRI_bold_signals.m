@@ -1,0 +1,57 @@
+% Function that check the fmri signals stored in a matrix.
+% roiSignals: matrix that stores in each column the BOLD signal for a ROI.
+% (Numbers od rows: length of the BOLD signal. Number of cols: number of
+% ROIs.
+
+function fig = check_fMRI_bold_signals(roiSignals) 
+
+    fig = figure('units','normalized','outerposition',[0 0 1 1]) ;
+    
+    
+    % Cross correlation:
+    crossCorrSignals = corr(roiSignals) ; % cross corr
+    
+    % [ SEÑALES BOLD ] 
+    subplot(2,3,1) ;
+    for j = 1 : size(roiSignals,2)
+        plot (roiSignals(:,j)) ;
+        title ('Señales BOLD') ;
+        xlim( [0 size(roiSignals,1)] ) ;
+        hold on ;
+    end
+    hold off ;
+    
+    % [ MATRICES ] 
+    subplot(2,3,2) ;
+    imagesc(crossCorrSignals) ;
+    sp7 = subplot(2,3,3) ;
+    spy(crossCorrSignals>0.5) ;
+    title ('mayor a 0.5') ;
+    
+    % [ HISTOGRAMA ] 
+    subplot(2,3,4) ;
+    histogram(crossCorrSignals)
+    xlim([-1,1]) ;
+    title('histograma correlación cruzada') ;
+    
+    % [ AUTOCORRELACION ] 
+    subplot(2,3,5) ;
+    lags= 75 ;
+    for j = 1 : size(roiSignals,2)
+        y = autocorr(roiSignals(:,j),'NumLags',lags ) ;
+        
+        plot (y) ;
+        title ('acf') ;
+        hold on ;
+    end
+    hold off ;
+    
+    
+    % Power spectrum of all signals
+    roiSignalsZ = normalize(roiSignals);
+    % Concatenate:
+    roiSingalsZ_concat = reshape(roiSignalsZ, [], 1);
+    % Show power spectrum:
+    subplot(2,3,6) ;
+    pspectrum(roiSingalsZ_concat)
+end 
