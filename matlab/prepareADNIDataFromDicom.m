@@ -1,23 +1,28 @@
 clear all
 close all
 
+dataPartitionPath = '/data/'; %'D:/'
+adniPartitionPath = '/data_imaging/'; %'F:/'
+% Load data:
+loadData = 0;
 %% ADD PATHS
-addpath('D:\UNSAM\Brain\dicm2nii\')
-addpath(genpath('D:\UNSAM\Brain\DPABI_V6.2_220915\'))
-addpath('D:\UNSAM\Brain\spm12\spm12\')
-addpath('D:\UNSAM\Brain\DPABI_V6.2_220915\DPARSF')
+addpath([dataPartitionPath 'UNSAM/Brain/dicm2nii/'])
+addpath(genpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/']))
+addpath([dataPartitionPath 'UNSAM/Brain/spm12/spm12/'])
+addpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/DPARSF/'])
 
 %% PATHS AND FILENAMES
 overwriteNifti = 1; % If 0 won't process existing Nfiti data in the DPARSF folder
 format = '.nii.gz';
 dcmHeadersFilename = 'dcmHeaders.mat';
-adniPath = 'F:/ADNIdata/';
-dataPath = [adniPath '/ADNIdicom/'];
+adniPath = [adniPartitionPath '/ADNIdata/ADNI3_Advanced_fMRI/ADNI3_AdvancedFmri/'];
+dataPath = [adniPath '/ADNI/'];
 
-dparsfConfigFilenamesPerManufacturer = {'D:\UNSAM\CEMSC3\ProcesamientoADNI\DPARFS\DPARSF_config_siemens.mat', 'D:\UNSAM\CEMSC3\ProcesamientoADNI\DPARFS\DPARSF_config_ge.mat',...
-    'D:\UNSAM\CEMSC3\ProcesamientoADNI\DPARFS\DPARSF_config_philips.mat'};
+dparsfConfigFilenamesPerManufacturer = {[dataPartitionPath 'UNSAM/CEMSC3/ProcesamientoADNI/DPARFS/DPARSF_config_siemens.mat'], ...
+    [dataPartitionPath 'UNSAM/CEMSC3/ProcesamientoADNI/DPARFS/DPARSF_config_ge.mat'],...
+    [dataPartitionPath 'UNSAM/CEMSC3/ProcesamientoADNI/DPARFS/DPARSF_config_philips.mat']};
 
-outputPath = 'F:/ADNIdata/Processed/';
+outputPath = [adniPath '/Processed/'];
 dparsfPath = [outputPath '/DPARSF/'];
 niftiPath = [outputPath '/Nifti/'];
 if ~isdir(dparsfPath)
@@ -27,7 +32,7 @@ if ~isdir(niftiPath)
     mkdir(niftiPath)
 end
 %% ADNI DATABASE COLLECTION
-filenameADNICollection = 'ADNI3_fmri_12_19_2022.csv';
+filenameADNICollection = 'ADNI3_AdvancedFmri_6_27_2023.csv';
 nameRsFmriInCollectionDataBase = {'Axial rsfMRI (Eyes Open)', 'Axial fcMRI', 'Axial - Advanced fMRI'}; %{'Axial rsfMRI (Eyes Open)', 'Axial fcMRI'};
 nameRsFmriAdvancedInCollectionDataBase = {'Axial MB rsfMRI'};%'Axial MB rsfMRI (Eyes Open)';
 % Load adni dicom collection csv:
@@ -35,7 +40,10 @@ adniCollectionData = readtable([adniPath filenameADNICollection]);
 %% LOAD PREVIOUS RUN
 % If didn't finish processing, load the workspace and to cntinue from the
 % PROCESS EACH CASE cell changing the i index.
-%load([outputPath 'workspaceProcessingScript.mat'])
+if loadData
+    RunDparsf(dparsfConfigFilenamesPerManufacturer, [outputPath 'workspaceProcessingScript.mat'])
+    exit
+end
 %% NAME SEQUENCES
 nameT1 = 't1_mprage_1x1x1';
 nameRsFmri = {'Axial_rsfMRI', 'Axial_fcMRI'};
@@ -168,6 +176,8 @@ end
 %% FOLDERS FOR DPARSF
 t1NameNifti = 'T1Img';
 fmriNameNifti = 'FunImg';
+fmriSliceCorrectedNameNifti = 'FunImgA';
+fmriFullyPreprocessedNameNifti = 'FunImgARWSD';
 fieldmapBaseNameNifti = 'FieldMap';
 fieldmapPhaseNameNifti = 'PhaseDiffImg';
 fieldmapMagNameNifti = 'Maginute1Img';
@@ -348,21 +358,34 @@ for s = 1 : numel(scanners)
         warning(sprintf('%d of the fMRI scans have a different time slice order for %s manufacturer', numel(sliceOrderManufacturer{s})-j, scanners{s}))
     end
 end
+%% SAVE DATA
+save([outputPath 'workspaceProcessingScript']);
 %% RUN DPARSF
 % Process each folder using the respective config file.
-for s = 1 : numel(scanners)
-    configThisManufacturer = load(dparsfConfigFilenamesPerManufacturer{s});
-    for g = 1 : numel(groups)
-        dparsfThisGroupBasePath = [dparsfPerGroupPath groups{g} '_' scanners{s} '/'];
-        dparsfThisGroupFunPath = [dparsfThisGroupBasePath fmriNameNifti '/'];
-        listDir = dir(dparsfThisGroupFunPath);
-        subjectNames = listDir(3:end); % Remove ., ..
-        configThisManufacturer.Cfg.WorkingDir = dparsfThisGroupBasePath;
-        configThisManufacturer.Cfg.DataProcessDir = dparsfThisGroupBasePath;
-        configThisManufacturer.Cfg.SubjectID = {subjectNames(:).name};
-        configThisManufacturer.Cfg.SubjectNum = numel(subjectNames);
-        configThisManufacturer.Cfg.IsNeedReorientFunImgInteractively = 0; % Do not reorient manually.
-        [Error]=DPARSF_run(configThisManufacturer.Cfg);
+RunDparsf(dparsfConfigFilenamesPerManufacturer, [outputPath 'workspaceProcessingScript.mat'])
+
+%% FUNCTION TO RUN DPARSF
+function RunDparsf(dparsfConfigFilenamesPerManufacturer, workspaceFilename)
+    if nargin == 2
+        load(workspaceFilename)
+    end
+    for s = 1 : numel(scanners)
+        configThisManufacturer = load(dparsfConfigFilenamesPerManufacturer{s});
+        for g = 1 : numel(groups)
+            dparsfThisGroupBasePath = [dparsfPerGroupPath groups{g} '_' scanners{s} '/'];
+            dparsfThisGroupFunPath = [dparsfThisGroupBasePath fmriNameNifti '/'];
+            listDir = dir(dparsfThisGroupFunPath);
+            subjectNames = listDir(3:end); % Remove ., ..
+            configThisManufacturer.Cfg.WorkingDir = dparsfThisGroupBasePath;
+            configThisManufacturer.Cfg.DataProcessDir = dparsfThisGroupBasePath;
+            configThisManufacturer.Cfg.SubjectID = {subjectNames(:).name};
+            configThisManufacturer.Cfg.SubjectNum = numel(subjectNames);
+            configThisManufacturer.Cfg.IsNeedReorientFunImgInteractively = 0; % Do not reorient manually.
+            configThisManufacturer.Cfg.IsNeedReorientT1ImgInteractively = 0;
+            %configThisManufacturer.Cfg.IsAllowGUI = 0;
+            % File to the AAL atlas:
+            configThisManufacturer.Cfg.CalFC.ROIDef = {[dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/Templates/aal.nii']};
+            [Error]=DPARSF_run(configThisManufacturer.Cfg);
+        end
     end
 end
-

@@ -376,30 +376,36 @@ save('normROISignals_AD.mat','normROISignals_AD')
 % este codigo parte de los archivos guardados en el paso anterior
 % no usa ninguna de las variables anteriores, solo archivos
 clear all 
-close all 
+%close all 
 clc
 
 
 % cargo los archivos
-cd /home/triniibar/Desktop/Corregidos/998ROI/ % directorio donde estan los archivos
+%cd "/home/martin/data/UNSAM/CEMSC3/ProcesamientoADNI/atlas 998 ROI-20230303T211208Z-001/atlas 998 ROI/" % directorio donde estan los archivos
 AD_signals = load('normROISignals_AD.mat'); % struct
 AD_signals = AD_signals.normROISignals_AD ; % variable en el struct 
 CN_signals = load('normROISignals_CN.mat'); % struct
 CN_signals = CN_signals.normROISignals_CN ; % variable en el struct 
+dataPath = '/home/martin/data/UNSAM/CEMSC3/ProcesamientoADNI/atlas 998 ROI-20230303T211208Z-001/atlas 998 ROI/ ROI Signals AD/';
+AD_signals = load([dataPath 'ROISignals_ROISignal_002_S_5018.mat']);
+AD_signals = AD_signals.ROISignals';
 
+dataPath = '/home/martin/data/UNSAM/CEMSC3/ProcesamientoADNI/atlas 998 ROI-20230303T211208Z-001/atlas 998 ROI/ROI Signals CN/';
+CN_signals = load([dataPath 'ROISignals_ROISignal_002_S_0413.mat']);
+CN_signals = CN_signals.ROISignals';
 
 % calculo de la funcion autocorrelacion 
-lags= 50 ;
+lags= 130 ;
 roi= randi(998) ; % elijo un roi aleatorio
 acf_AD= autocorr(AD_signals(roi,:),'NumLags',lags) ;
-acf_CN= autocorr(CN_signals(roi,:),'NumLags',lags) ;
+acf_CN= autocorr(CN_signals(roi,:),'NumLags',lags);
 
 
 % plot de ambas acf
-figure(1)
+figure
 subplot(2,1,1)
 plot(acf_AD,'r');
-xlim([0,50]);
+xlim([0,lags]);
 ylim([-0.5,1]);
 texto = strcat('señales AD','--->','roi:',string(roi));
 title(texto) ;
@@ -407,7 +413,7 @@ texto = strcat('acf','--> lags ', string(lags));
 legend(texto) ;
 subplot(2,1,2)
 plot(acf_CN,'m');
-xlim([0,50]);
+xlim([0,lags]);
 ylim([-0.5,1]);
 texto = strcat('señales CN','--->','roi:',string(roi));
 title(texto) ;
@@ -429,7 +435,7 @@ subplot(2,1,1)
 plot(acf_AD,'r')
 hold on ;
 plot(acf_flipAD)
-xlim([0,50]);
+xlim([0,lags]);
 ylim([-0.5,1]);
 texto = strcat('señales AD','--->','roi:',string(roi));
 title(texto) ;
@@ -439,7 +445,7 @@ subplot(2,1,2)
 plot(acf_CN,'m')
 hold on 
 plot(acf_flipCN)
-xlim([0,50]);
+xlim([0,lags]);
 ylim([-0.5,1]);
 texto = strcat('señales CN','--->','roi:',string(roi));
 title(texto) ;
@@ -448,23 +454,23 @@ hold off
 
 
 % plot de la acf para random roi 
-figure(3)
+figure(3);
 roi_i=[] ;
 for i=1:5
     roi= randi(998) ;
-    acf_AD= autocorr(AD_signals(roi,:),'NumLags' , lags) ;
-    acf_CN= autocorr(CN_signals(roi,:),'NumLags' , lags) ;
+    [acf_AD, ad_lags] = autocorr(AD_signals(roi,:),'NumLags' , lags) ;
+    [acf_CN, cn_lags] = autocorr(CN_signals(roi,:),'NumLags' , lags) ;
     
     subplot(2,1,1)
     plot(acf_AD) ; 
-    xlim([0,50]);
+    xlim([0,lags]);
     ylim([-0.5,1]);
     title ('acf para 5 ROI aleatorios (AD)');
     hold all ; 
     
     subplot(2,1,2)
     plot(acf_CN) ; 
-    xlim([0,50]);
+    xlim([0,lags]);
     ylim([-0.5,1]);
     title ('acf para 5 ROI aleatorios (CN)');
     hold all ; 

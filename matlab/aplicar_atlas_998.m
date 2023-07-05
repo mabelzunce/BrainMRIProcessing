@@ -10,9 +10,9 @@ firstCovThenStats = 1; % if 1, first the COV matrices are computed and then the 
 
 %% carga la informacion del atlas
 
-cd /home/triniibar/Documents/codigos_para_armar_la_database/
-ATLAS = load('DSI_enhanced.mat');
-path = '/home/triniibar/Desktop/Corregidos/998ROI/matrices/' ;
+%cd /home/triniibar/Documents/codigos_para_armar_la_database/
+ATLAS = load('/data/UNSAM/Brain/DSI_enhanced.mat');
+path = '/home/martin/data/UNSAM/CEMSC3/ProcesamientoADNI/atlas 998 ROI-20230308T171237Z-001/atlas 998 ROI/Matrices con todos los subjects/' ;
 
 %% Declaro las variables utiles
 

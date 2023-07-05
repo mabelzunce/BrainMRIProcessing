@@ -1,16 +1,18 @@
 % mode = 0: meanFMRI
 % mode = 1:
-function SaveOverlayImageWithRois(fmri, atlas, filename, mode)
+function SaveOverlayImageWithRois(fmri, atlas, cmap, filename, mode)
     if ndims(fmri) == 4
         meanFmri = mean(fmri,4);
         meanFmri = (meanFmri-min(meanFmri, [], 'all'))./(max(meanFmri, [], 'all')+min(meanFmri, [], 'all'));
     end
-    cm_jet = colormap('lines');
+    if isempty(cmap)
+        cmap = colormap('lines');
+    end
     for j = 1 : size(meanFmri, 3)
         % Go through each slice and generate a fused image:
         numLabelsThisSlice = max(max(atlas(:,:,j)));
         imageWithMasks = labeloverlay(1.5*meanFmri(:,:,j)', atlas(:,:,j)', 'Transparency',0.8, 'IncludedLabels',...
-            [1:numLabelsThisSlice], 'Colormap',cm_jet);
+            [1:numLabelsThisSlice], 'Colormap',cmap);
         if ndims(imageWithMasks) == 3
             [imind,cm] = rgb2ind(imageWithMasks,256); 
         else

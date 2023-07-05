@@ -95,6 +95,9 @@ for s = 1 : numel(scanners)
                 maskRoi = aalImage_3mm == j;
                 boldSignalsPerRoi(1:boldLength(indexSubject), j, indexSubject) = squeeze(sum(fmriFullyPreprocessedImage.*maskRoi, [1 2 3]))./...
                     repmat(sum(maskRoi(:)), [size(fmriFullyPreprocessedImage,4) 1]);
+                 % Compute autocorr:
+                    
+                 cnAutocorrLag1(j,i) = ac(2);
             end
             % Save image to verify:
             SaveOverlayImageWithRois(fmriFullyPreprocessedImage, aalImage_3mm, [outputPathThisSubject 'meanfMriAAL.gif']);
@@ -118,7 +121,30 @@ fullProcessedResults.boldSignalsDparsf = boldSignalsDparsf;
 fullProcessedResults.boldCorrMatrix = boldCrossCorr;
 fullProcessedResults.boldCorrMatrixDparsf = boldCorrMatrixDparsf;
 save([boldPath 'fullProcessedResults.mat'], 'fullProcessedResults');
-
+%% CHECK CORRELATION MATRIX
+figure;
+for i = 1 : size(boldCrossCorr,3)
+    subplot(1,2,1);
+    imagesc(boldCrossCorr(:,:,i));
+    subplot(1,2,2);
+    imagesc(boldCorrMatrixDparsf(:,:,i));
+    pause(0.5);
+end
+%% CHECK CORRELATION MATRIX
+% First the lower traingular part of the matrix as they are symmetric.
+lowerDiagonalMask = logical(tril(ones(size(boldCrossCorr(:,:,1)))));
+figure;
+for i = 1 : size(boldCrossCorr,3)
+    matrixCC = boldCrossCorr(:,:,i);
+    vecCC = matrixCC(lowerDiagonalMask);
+    subplot(1,2,1);
+    hist(vecCC);
+    matrixCC = boldCorrMatrixDparsf(:,:,i);
+    vecCC = matrixCC(lowerDiagonalMask);
+    subplot(1,2,2);
+    hist(vecCC);
+    pause(0.5);
+end
 %% AD
 adBatches = 7;
 j = 1; % index to count total processed subjects.

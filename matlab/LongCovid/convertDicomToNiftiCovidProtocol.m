@@ -3,8 +3,8 @@ close all
 
 dataPartitionPath = '/data/'; %'D:/'
 adniPartitionPath = '/data_imaging/'; %'F:/'
-% Load data:
-loadData = 1;
+% % Load data:
+% loadData = 0;
 % Overwrite Nifti:
 overwriteNifti = 0; % 0: if nifti conversion exists, just reads the images and headers, 1: covnerts and overwrites again
 %% ADD PATHS
@@ -37,7 +37,7 @@ nameFieldmappingPhase = 'gre_field_mapping_2mm_phase';
 %% CASES TO PROCESS
 casesToProcess = [];%{'CP0002', 'CP0006', 'CP0007', 'CP0008', 'CP0009', 'CP0010'};
 %% FOLDERS FOR FREEFURSFER
-filenameFreesurferScript = [preprocessedDataPath 'freesurferScript.txt'];
+filenameFreesurferScript = [preprocessedDataPath 'freesurferScript.sh'];
 if ~isdir(freesurferSubjectsPath)
     mkdir(freesurferSubjectsPath);
 end
@@ -100,7 +100,13 @@ for i = 1 : numel(casesToProcess)
     sequencesPerSubject{i} = fieldnames(dcmTags{i}.h);
     %% GET ALL PARAMETERS FOR EACH SEQUENCE
     %% T1
-    indexT1 = strncmp(sequencesPerSubject{i}, dfltNameT1, numel(dfltNameT1));
+    indexT1 = find(strncmp(sequencesPerSubject{i}, dfltNameT1, numel(dfltNameT1)) > 0);
+    % If there are more than 1 t1, use the last one (assumes that one was
+    % repeated).
+    if numel(indexT1) > 1 % There are two fmris, use the second one.
+        % Use only the last one, as this means this sequence was repeated.
+        indexT1 = indexT1(end);
+    end
     nameT1 = sequencesPerSubject{i}{indexT1};
     dcmTagsT1{i} = getfield(dcmTags{i}.h,nameT1);
     niftiT1Filenames{i} = [niftiPathThisSubject nameT1 '.nii.gz'];
@@ -112,7 +118,21 @@ for i = 1 : numel(casesToProcess)
     t1_imageSize_voxels(i,:) = info.ImageSize;
     t1_voxelSize_mm(i,:) = info.PixelDimensions;
     %% fMRI
-    indexfMri = strncmp(sequencesPerSubject{i}, 'funcional', numel('funcional'));
+    indexfMri = find(strncmp(sequencesPerSubject{i}, 'funcional', numel('funcional'))>0);
+    if numel(indexfMri) > 1 % There are two fmris, use the second one.
+        indexfMriNoMoco = []; % Esclude MoCoSeries.
+        for j = 1 : numel(indexfMri)
+            namefMri = sequencesPerSubject{i}{indexfMri(j)};
+            auxDcmTagsRsFmri = getfield(dcmTags{i}.h,namefMri);
+            if ~strcmp(auxDcmTagsRsFmri.SeriesDescription, 'MoCoSeries')
+                % If there are Motion Corrected Series
+                % Use only the last one, as this means this sequence was repeated.
+                indexfMriNoMoco = [indexfMriNoMoco indexfMri(j)];
+            end
+        end
+        % Use the last one
+        indexfMri = indexfMriNoMoco(end);
+    end
     namefMri = sequencesPerSubject{i}{indexfMri};
     dcmTagsRsFmri{i} = getfield(dcmTags{i}.h,namefMri);
     niftifMriFilenames{i} = [niftiPathThisSubject namefMri '.nii.gz'];
@@ -120,8 +140,13 @@ for i = 1 : numel(casesToProcess)
     %fMRI_matrixSize_voxels(i,:) = [dcmTagsRsFmri{i}.AcquisitionMatrix(1) dcmTagsRsFmri{i}.AcquisitionMatrix(4) dcmTagsRsFmri{i}.LocationsInAcquisition]; 
     fMRI_tR(i) = dcmTagsRsFmri{i}.RepetitionTime;
     fMRI_tE(i) = dcmTagsRsFmri{i}.EchoTime;
-    fMRI_sliceAcqTimes{i} = dcmTagsRsFmri{i}.MosaicRefAcqTimes;
-    [times, fMRI_sliceOrder{i}] = sort(dcmTagsRsFmri{i}.MosaicRefAcqTimes);
+    if isfield(dcmTagsRsFmri{i}, 'MosaicRefAcqTimes')
+        fMRI_sliceAcqTimes{i} = dcmTagsRsFmri{i}.MosaicRefAcqTimes;
+        [times, fMRI_sliceOrder{i}] = sort(dcmTagsRsFmri{i}.MosaicRefAcqTimes);
+    else
+        fMRI_sliceAcqTimes{i} = (0.5 - dcmTagsRsFmri{i}.SliceTiming) * dcmTagsRsFmri{i}.RepetitionTime;
+        [times, fMRI_sliceOrder{i}] = sort(fMRI_sliceAcqTimes{i});
+    end
     image = niftiread([niftifMriFilenames{i}]);
     info = niftiinfo([niftifMriFilenames{i}]);
     fMRI_imageSize_voxels(i,:) = info.ImageSize;
@@ -235,16 +260,17 @@ writetable(tablefMRI, [preprocessedDataPath 'fMRI_parameters' ])
 tableFieldMapping = table(casesToProcess', permute(fieldMapping_voxelSize_mm(:,1,:), [1 3 2]), ... % TR and voxel sizes should be the same for all images
     permute(fieldMapping_imageSize_voxels(:,1,:), [1 3 2]), fieldMapping_tR(:,1,:), ...
     fieldMapping_tE(:,1:2,:), fieldMapping_deltaTE(:,1,:), fieldMapping_unwarpDirection');
-writetable(tableFieldMapping, [preprocessedDataPath 'fieldMapping_parameters' ])
-%% RUN FREESURFER
-%freesurferLines = [freesurferLines 'recon-all -subject '];
-for i = 1 : numel(casesToProcess)
-    freesurferLines = [freesurferLines 'recon-all -subject ' casesToProcess{i} ' -all \n'];
-end
+writetable(tableFieldMapping, [preprocessedDataPath 'fieldMapping_parameters' ]);
+
+%% CREATE FREESURFER SCRIPT
 %freesurferLines = [freesurferLines ' -all\n'];
 % If in windows, save the script and run it later in Ubuntu for windows:
 fid = fopen(filenameFreesurferScript,'w');
+fprintf(fid,'#!/bin/bash \n');
 fprintf(fid, freesurferLines);
+for i = 1 : numel(casesToProcess)
+    fprintf(fid, 'recon-all -subject %s -all \n', casesToProcess{i});
+end
 fclose(fid);
 %% PREPROCESSING fMRI WITH FSL
 
