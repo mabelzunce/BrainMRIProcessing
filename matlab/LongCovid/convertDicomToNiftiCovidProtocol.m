@@ -269,7 +269,7 @@ fid = fopen(filenameFreesurferScript,'w');
 fprintf(fid,'#!/bin/bash \n');
 fprintf(fid, freesurferLines);
 for i = 1 : numel(casesToProcess)
-    fprintf(fid, 'recon-all -subject %s -all \n', casesToProcess{i});
+    fprintf(fid, 'recon-all -subject %s -all -openmp 12 \n', casesToProcess{i});
 end
 fclose(fid);
 %% PREPROCESSING fMRI WITH FSL

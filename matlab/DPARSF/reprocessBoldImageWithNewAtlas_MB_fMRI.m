@@ -56,42 +56,44 @@ fmriSubjects = fmriSubjects(3:end);
 schaeferSignalsAllSubjects = {};
 % Iterate over each preprocessed fMRI file
 for i = 1 : numel(fmriSubjects)
-    % Read the fMRI data
-    niftiFilename = dir(fullfile(preprocessedDataPath, fmriSubjects(i).name, '*.nii'));
-    fmriVolume = niftiread(fullfile(preprocessedDataPath, fmriSubjects(i).name, niftiFilename.name));
-    fmriInfo = niftiinfo(fullfile(preprocessedDataPath, fmriSubjects(i).name, niftiFilename.name));
-    
-    % Get the voxel dimensions
-    voxelSize_mm3 = fmriInfo.PixelDimensions(1:3);
-    tR_sec = fmriInfo.PixelDimensions(4);
-    imageSize_voxels = fmriInfo.ImageSize(1:3);
-    timePoints = fmriInfo.ImageSize(4);
-    
-    % Create a matrix to store the signals for the Schaefer atlas
-    schaeferSignals = zeros(timePoints, numLabels);
-    
-    % Iterate over each unique label in the Schaefer atlas
-    for label = roisIds'
-        % Get the indices corresponding to the current label in the Schaefer atlas
-        labelMask = (atlasVolume == label);
-        %indicesLabel = find(atlasVolume == label);
-        %[indLabelX, indLabelY, indLabelZ] = ind2sub(size(atlasVolume), indicesLabel);
-        % Convert mask into 4d:
-        labelMask4d = repmat(labelMask, 1, 1, 1, size(fmriVolume,4));
-        % Extract the mean signal for the current label
-        labelSignal = squeeze(sum(fmriVolume.*labelMask4d, [1 2 3]))./sum(labelMask,'all');
-        % Store the label signal in the Schaefer signals matrix
-        schaeferSignals(:, label) = labelSignal;
+    if ~exist([outputPathSignals suffixROIFilenames fmriSubjects(i).name '.mat'])
+        % Read the fMRI data
+        niftiFilename = dir(fullfile(preprocessedDataPath, fmriSubjects(i).name, '*.nii'));
+        fmriVolume = niftiread(fullfile(preprocessedDataPath, fmriSubjects(i).name, niftiFilename.name));
+        fmriInfo = niftiinfo(fullfile(preprocessedDataPath, fmriSubjects(i).name, niftiFilename.name));
+        
+        % Get the voxel dimensions
+        voxelSize_mm3 = fmriInfo.PixelDimensions(1:3);
+        tR_sec = fmriInfo.PixelDimensions(4);
+        imageSize_voxels = fmriInfo.ImageSize(1:3);
+        timePoints = fmriInfo.ImageSize(4);
+        
+        % Create a matrix to store the signals for the Schaefer atlas
+        schaeferSignals = zeros(timePoints, numLabels);
+        
+        % Iterate over each unique label in the Schaefer atlas
+        for label = roisIds'
+            % Get the indices corresponding to the current label in the Schaefer atlas
+            labelMask = (atlasVolume == label);
+            %indicesLabel = find(atlasVolume == label);
+            %[indLabelX, indLabelY, indLabelZ] = ind2sub(size(atlasVolume), indicesLabel);
+            % Convert mask into 4d:
+            labelMask4d = repmat(labelMask, 1, 1, 1, size(fmriVolume,4));
+            % Extract the mean signal for the current label
+            labelSignal = squeeze(sum(fmriVolume.*labelMask4d, [1 2 3]))./sum(labelMask,'all');
+            % Store the label signal in the Schaefer signals matrix
+            schaeferSignals(:, label) = labelSignal;
+        end
+        % Save image to verify:
+        SaveOverlayImageWithRois(fmriVolume, atlasVolume, atlasColormap, ...
+            [outputPathImages 'meanfMRISchaefer_' fmriSubjects(i).name '.gif']);
+                
+        % Save them as a .mat and csv:
+        save([outputPathSignals suffixROIFilenames fmriSubjects(i).name '.mat'], 'schaeferSignals');
+        writematrix(schaeferSignals, [outputPathSignals suffixROIFilenames fmriSubjects(i).name '.txt'],...
+            "Delimiter", ',');
+        schaeferSignalsAllSubjects{i} = schaeferSignals;
     end
-    % Save image to verify:
-    SaveOverlayImageWithRois(fmriVolume, atlasVolume, atlasColormap, ...
-        [outputPathImages 'meanfMRISchaefer_' fmriSubjects(i).name '.gif']);
-            
-    % Save them as a .mat and csv:
-    save([outputPathSignals suffixROIFilenames fmriSubjects(i).name '.mat'], 'schaeferSignals');
-    writematrix(schaeferSignals, [outputPathSignals suffixROIFilenames fmriSubjects(i).name '.txt'],...
-        "Delimiter", ',');
-    schaeferSignalsAllSubjects{i} = schaeferSignals;
 end
 
 %% CHECK THE IMAGES

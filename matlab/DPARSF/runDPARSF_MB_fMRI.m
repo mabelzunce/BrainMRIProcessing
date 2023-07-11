@@ -5,6 +5,7 @@ dataPartitionPath = '/data/'; %'D:/'
 adniPartitionPath = '/data_imaging/'; %'F:/'
 % Load data:
 loadData = 1;
+currentPath = pwd;
 %% ADD PATHS
 addpath([dataPartitionPath 'UNSAM/Brain/dicm2nii/'])
 addpath(genpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/']))
@@ -14,9 +15,12 @@ addpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/DPARSF/'])
 [ProgramPath, fileN, extn] = fileparts(which('DPARSF.m'));
 load([ProgramPath,filesep,'Jobmats',filesep,'Template_CalculateInMNISpace_TraditionalOrder.mat']);
 %% NIFTI DATA PATH
-dataPath = '/home/martin/data_imaging/ADNIdata/ADNI3_Advanced_fMRI/ADNI3_AdvancedFmri/Processed/DPARSFBandPass/';
+dataPath = '/home/martin/data_imaging/ADNIdata/ADNI3_Advanced_fMRI/ADNI3_AdvancedFmri/Processed/DPARSFtemp2/';
+dataPath = '/home/martin/ADNI3_AdvancedFmri/Processed/DPARSF/';
 subjectsInfo = '/home/martin/data_imaging/ADNIdata/ADNI3_Advanced_fMRI/ADNI3_AdvancedFmri/ADNI3_Advanced_fMRI_6_27_2023.csv';
 indexScanner = 3; % Siemens=1, GE=2, Philips=3.
+%% CONFIG
+bandPassFilter = 0; %If not band pass, only high pass
 %% FOLDERS FOR DPARSF
 t1NameNifti = 'T1Img';
 fmriNameNifti = 'FunImg';
@@ -49,7 +53,10 @@ cfg.IsSliceTiming = 0;
 listDir = dir(fmriDparsfPath);
 % Remove the high cut off of the band pass filter (high pass filter now):
 cfg.Filter.ASamplePeriod = cfg.TR;
-%cfg.Filter.ALowPass_HighCutoff = 0; % 0 mean no cut off.
+if bandPassFilter ~= 1
+    cfg.Filter.ALowPass_HighCutoff = 0; % 0 mean no cut off.
+end
+
 
 % Voxel size:
 cfg.Normalize.VoxSize = [2 2 2];
@@ -109,47 +116,64 @@ cfg.IsCalVMHC=0;
 % File to the AAL atlas:
 cfg.CalFC.ROIDef = {[dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/Templates/aal.nii']};
 %%
+batchSize = 1;
+allSubjectNames = {listDir(3:end).name};
+numBatches = ceil(numel(allSubjectNames)./batchSize);
 % Get all subjects that are similar:
-for i = 1 : 2 %numel(listDir)-2
-    subjectNames{i} = listDir(i+2).name;
-    niftiFilesThisSubejct = dir([fmriDparsfPath subjectNames{i} '/*.nii*']);
-    image = niftiread([fmriDparsfPath subjectNames{i} '/' niftiFilesThisSubejct(1).name]);
-    imageSize_voxels(i,:) = size(image);
-    timePoints(i) = imageSize_voxels(i,4);
-    numSlices(i) = imageSize_voxels(i,3);
+for i = 1 : numBatches%numel(listDir)-2
+    clear subjectNames
+    clear imageSize_voxels
+    clear timePoints
+    clear numSlices
+    for j = 1 : batchSize
+        indexDir = (i-1)*batchSize + j;
+        subjectNames{j} = allSubjectNames{indexDir};
+        niftiFilesThisSubejct = dir([fmriDparsfPath subjectNames{j} '/*.nii*']);
+        image = niftiread([fmriDparsfPath subjectNames{j} '/' niftiFilesThisSubejct(1).name]);
+        imageSize_voxels(j,:) = size(image);
+        timePoints(j) = imageSize_voxels(j,4);
+        numSlices(j) = imageSize_voxels(j,3);
+    end
+    % Group all the subjects with the same numSlices and timePoints:
+    indicesSameNumSlices = numSlices==numSlices(1);
+    if sum(indicesSameNumSlices) ~= numel(subjectNames)
+        warning('Not all the images have the same number of slices.')
+    end
+    indicesTimePoints = timePoints==timePoints(1);
+    if sum(indicesTimePoints) ~= numel(subjectNames)
+        warning('Not all the images have the same number of time points.')
+    end
+    % subjects and paths:
+    cfg.SubjectID = subjectNames;
+    cfg.SubjectNum = numel(subjectNames);
+    cfg.WorkingDir = dataPath;
+    cfg.DataProcessDir = dataPath;
+    cfg.TimePoints = 0;
+    tic
+    [Error, cfg_out{indexDir}]=DPARSFA_run(cfg);
+    toc
+    % Free space:
+    rmdir([dataPath '/FunImgR/'],'s')
+    rmdir([dataPath '/FunImgRW/'],'s')
+    rmdir([dataPath '/FunImgRWS/'],'s')
+    rmdir([dataPath '/FunImgRWSD/'],'s')
+    cd(currentPath)
 end
 
-% Group all the subjects with the same numSlices and timePoints:
-indicesSameNumSlices = numSlices==numSlices(1);
-if sum(indicesSameNumSlices) ~= numel(subjectNames)
-    warning('Not all the images have the same number of slices.')
-end
-indicesTimePoints = timePoints==timePoints(1);
-if sum(indicesTimePoints) ~= numel(subjectNames)
-    warning('Not all the images have the same number of time points.')
-end
-% subjects and paths:
-cfg.SubjectID = subjectNames;
-cfg.SubjectNum = numel(subjectNames);
-cfg.WorkingDir = dataPath;
-cfg.DataProcessDir = dataPath;
-cfg.TimePoints = 0;
-tic
-[Error, cfg]=DPARSFA_run(cfg);
-toc
 
-%% RERUN
-cfg.StartingDirName = 'FunImgRWSD';
-cfg.IsRealign = 0;
-cfg.IsNormalize = 0;
-cfg.IsSmooth = 0;
-cfg.IsDetrend = 0;
-[Error, cfg]=DPARSFA_run(cfg);
+
+% %% RERUN
+% cfg.StartingDirName = 'FunImgRWSD';
+% cfg.IsRealign = 0;
+% cfg.IsNormalize = 0;
+% cfg.IsSmooth = 0;
+% cfg.IsDetrend = 0;
+% [Error, cfg]=DPARSFA_run(cfg);
 %% CHECK THE IMAGES
 
 tableSubjects = readtable(subjectsInfo);
-for i = 1 : numel(subjectNames)
-    resultSignals = load([dataPath '/Results/ROISignals_FunImgRWSDCF/ROISignals_' subjectNames{i} '.mat']);
+for i = 1 : numel(allSubjectNames)
+    resultSignals = load([dataPath '/Results/ROISignals_FunImgRWSDCF/ROISignals_' allSubjectNames{i} '.mat']);
     roiSignals = resultSignals.ROISignals;
     fig = check_fMRI_bold_signals(roiSignals);
 end

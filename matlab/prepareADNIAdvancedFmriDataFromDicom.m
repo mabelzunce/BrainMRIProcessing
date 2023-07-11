@@ -16,6 +16,7 @@ overwriteNifti = 1; % If 0 won't process existing Nfiti data in the DPARSF folde
 format = '.nii.gz';
 dcmHeadersFilename = 'dcmHeaders.mat';
 adniPath = [adniPartitionPath '/ADNIdata/ADNI3_Advanced_fMRI/ADNI3_AdvancedFmri/'];
+adniPath = '/home/martin/ADNI3_AdvancedFmri/';
 dataPath = [adniPath '/ADNI/'];
 
 dparsfConfigFilenamesPerManufacturer = {[dataPartitionPath 'UNSAM/CEMSC3/ProcesamientoADNI/DPARFS/DPARSF_config_siemens.mat'], ...
