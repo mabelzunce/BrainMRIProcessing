@@ -1,9 +1,17 @@
-function FslBet(filenameMri, outputFilename, dTE)
-    [filepath,name,ext] = fileparts(filenameMri);
-    filenameMri_brain = [filepath '\' name '_brain' ext];
-    command = sprintf('bet %s %s -f 0.5 -g 0', filenameMri, filenameMag1_brain);
-    if out < 0
-        filenameMag1_brain = [];
+% FSL Bet
+function filenameMri_brain = FslBet(filenameMri, outputPath, parameters, centre)
+    if nargin == 4
+        parameters = [parameters sprintf(' -c %d %d %d', centre(1), centre(2), centre(3))];
     end
-    return filenameMag1_brain;
+    [filepath,name,ext] = fileparts(filenameMri);
+    if contains(name, '.')
+        [p, name, ext2] = fileparts(name);
+    end
+    % The output using the output path:
+    filenameMri_brain = fullfile(outputPath, [name '_brain']);
+    command = sprintf('bet %s %s %s', filenameMri, filenameMri_brain, parameters);
+    out=system(command);
+    if out < 0
+        filenameMri_brain = [];
+    end
 end

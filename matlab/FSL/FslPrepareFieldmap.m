@@ -1,4 +1,4 @@
-function FslPrepareFieldmap(filenamePhase, filenameMag1, outputFilename, dTE)
+function outputFilename = FslPrepareFieldmap(filenamePhase, filenameMag1, outputFilename, dTE)
     % Call BET to extract brain from magnitude:
     [filepath,name,ext] = fileparts(filenameMag1);
     filenameMag1_brain = [filepath '\' name '_brain' ext];
@@ -11,5 +11,5 @@ function FslPrepareFieldmap(filenamePhase, filenameMag1, outputFilename, dTE)
     if out < 0
         outputFilename = [];
     end
-    return outputFilename;
+    return 
 end
