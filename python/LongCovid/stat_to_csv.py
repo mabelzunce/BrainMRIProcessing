@@ -7,11 +7,12 @@ import sys
 import pandas as pd
 
 
-def aseg_to_csv(file, name_new_file):
+def aseg_to_csv(file, name_new_file, name_brainvol):
     '''Convert aseg.stats to csv'''
 
     with open(file, 'r') as f:
         lines = f.readlines()
+        etiv = lines[33].strip().split(", ")[2::]
         headers = lines[78].split()[2::]
         data = lines[79::]
 
@@ -22,6 +23,12 @@ def aseg_to_csv(file, name_new_file):
         for row in data:
             row = row.strip().split()
             csv_writer.writerow(row)
+
+    # Write Estimated Total IntraCraneal Value in brainvol.csv
+    with open(name_brainvol, 'a') as file:
+        csv_writer = csv.writer(file)
+        csv_writer.writerow(etiv)
+
 
     return
 
@@ -67,6 +74,7 @@ def brainvol_to_csv(file, name_new_file):
             if row[2] == "Total cortical gray matter volume":
                 total_gm = float(row[3])
 
+
             csv_writer.writerow(row[2::])
 
 
@@ -108,7 +116,11 @@ def create_csvs(subject, path_subject, output_path
         os.makedirs(subject_path)
 
     common_path = output_path + subject + '/' + subject
-    aseg_to_csv(path_aseg, common_path + '_aseg.csv')
+
+    # brainvol
+    brainvol_to_csv(path_brainvol, common_path + '_brainvol.csv')
+
+    aseg_to_csv(path_aseg, common_path + '_aseg.csv', common_path + '_brainvol.csv')
     # aparc
     aparc_to_csv(path_lh_aparc, common_path + '_lh_aparc.csv')
     aparc_to_csv(path_rh_aparc, common_path + '_rh_aparc.csv')
@@ -121,7 +133,6 @@ def create_csvs(subject, path_subject, output_path
     aparc_to_csv(path_lh_aparcDKT, common_path + '_lh_aparcDKT.csv')
     aparc_to_csv(path_rh_aparcDKT, common_path + '_rh_aparcDKT.csv')
 
-    brainvol_to_csv(path_brainvol, common_path + '_brainvol.csv')
 
     return
 
