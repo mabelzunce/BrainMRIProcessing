@@ -4,12 +4,15 @@ import csv
 import os
 import sys
 
+import pandas as pd
 
-def aseg_to_csv(file, name_new_file):
+
+def aseg_to_csv(file, name_new_file, name_brainvol):
     '''Convert aseg.stats to csv'''
 
     with open(file, 'r') as f:
         lines = f.readlines()
+        etiv = lines[33].strip().split(", ")[2::]
         headers = lines[78].split()[2::]
         data = lines[79::]
 
@@ -20,6 +23,12 @@ def aseg_to_csv(file, name_new_file):
         for row in data:
             row = row.strip().split()
             csv_writer.writerow(row)
+
+    # Write Estimated Total IntraCraneal Value in brainvol.csv
+    with open(name_brainvol, 'a') as file:
+        csv_writer = csv.writer(file)
+        csv_writer.writerow(etiv)
+
 
     return
 
@@ -59,13 +68,28 @@ def brainvol_to_csv(file, name_new_file):
             row = row.strip().split(', ')
             if row[1] == "SupraTentorialVolNotVent":
                 row[2] = "Supratentorial volume NotVent"
+
+            if row[2] == "Brain Segmentation Volume":
+                total_brain_vm = float(row[3])
+            if row[2] == "Total cortical gray matter volume":
+                total_gm = float(row[3])
+
+
             csv_writer.writerow(row[2::])
+
+
+        # normalizacion
+
+        normalization = total_gm / total_brain_vm * 100
+        row = ["Grey Matter Normalization (notFS)", normalization, "s/u"]
+        csv_writer.writerow(row)
 
     return
 
 
-def create_csvs(subject):
-    subjects_dir_stats = "/home/sol/COVID/subjects/" + subject + "/stats"
+def create_csvs(subject, path_subject, output_path
+                ):
+    subjects_dir_stats = path_subject + "/" + subject + "/stats"
 
     path_aseg = subjects_dir_stats + "/aseg.stats"
 
@@ -84,13 +108,19 @@ def create_csvs(subject):
 
     path_brainvol = subjects_dir_stats + "/brainvol.stats"
 
-    subject_path = os.path.join("/home/sol/COVID/CSV_subjects/", subject)
+
+
+    subject_path = os.path.join(output_path, subject)
 
     if not os.path.exists(subject_path):  # create path of subject
         os.makedirs(subject_path)
 
-    common_path = "/home/sol/COVID/CSV_subjects/" + subject + '/' + subject
-    aseg_to_csv(path_aseg, common_path + '_aseg.csv')
+    common_path = output_path + subject + '/' + subject
+
+    # brainvol
+    brainvol_to_csv(path_brainvol, common_path + '_brainvol.csv')
+
+    aseg_to_csv(path_aseg, common_path + '_aseg.csv', common_path + '_brainvol.csv')
     # aparc
     aparc_to_csv(path_lh_aparc, common_path + '_lh_aparc.csv')
     aparc_to_csv(path_rh_aparc, common_path + '_rh_aparc.csv')
@@ -103,19 +133,53 @@ def create_csvs(subject):
     aparc_to_csv(path_lh_aparcDKT, common_path + '_lh_aparcDKT.csv')
     aparc_to_csv(path_rh_aparcDKT, common_path + '_rh_aparcDKT.csv')
 
-    brainvol_to_csv(path_brainvol, common_path + '_brainvol.csv')
 
     return
 
 
 if __name__ == '__main__':
-    path = "/home/sol/COVID/subjects/"
+    path_COVID = "/home/sol/COVID/FS_subjects"
+    path_ADNI_CN = "/home/sol/ADNI/ADNI_COVID/CN"
+    path_ADNI_AD = "/home/sol/ADNI/ADNI_COVID/AD"
 
-    if len(sys.argv) > 1:
-        subjects = sys.argv[1::]
-    else:
-        print(os.listdir(path))
-        subjects = [f for f in os.listdir(path) if os.path.isdir(os.path.join(path, f))]  # list of subjects
+    output_path_COVID = "/home/sol/COVID/CSV_subjects"
+    output_path_AD = "/home/sol/COVID/CSV_subjects/AD/"
+    output_path_CN = "/home/sol/COVID/CSV_subjects/CN/"
+
+    if not os.path.exists(output_path_COVID):
+        os.mkdir(output_path_COVID)
+
+    # Change the path to the location where the FreeSurfer files are located.
+    subjects = [f for f in os.listdir(path_COVID) if os.path.isdir(os.path.join(path_COVID, f))]  # list of subjects
+
+    subjects = sorted(subjects)
+
+
+    # Read CSV with COVID subjects group
+    path_CSV_covid_group = "/home/sol/COVID/CSV_subjects/COVID_group.csv"
+    CSV_covid_group = pd.read_csv(path_CSV_covid_group)
+
+    # If covid files
+    COVID = True
 
     for subject in subjects:
-        create_csvs(subject)
+        if subject == "fsaverage":
+            continue
+
+        #COVID
+        if COVID:
+
+            group = CSV_covid_group.loc[CSV_covid_group["subject"] == subject]["group"].values[0]
+
+            if group == "Prueba Piloto":
+                group = "Control"
+
+            output_path_COVID_subject = os.path.join(output_path_COVID, group) + "/"
+
+            if not os.path.exists(output_path_COVID_subject):
+                os.mkdir(output_path_COVID_subject)
+
+            create_csvs(subject, path_COVID, output_path_COVID_subject)
+
+        else:
+            create_csvs(subject, path_ADNI_AD, output_path_AD)
