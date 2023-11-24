@@ -242,4 +242,71 @@ for i = 1 : numBrainNetworks
     p_kw(i) = kruskalwallis(rmsBrainNetowrksSubjects(:,i),group);
     p_anova(i) = anova1(rmsBrainNetowrksSubjects(:,i),group);
 end
+%% VIOLIN PLOTS
+% Get the code for violin plots from: https://github.com/bastibe/Violinplot-Matlab.git
+violinPlotLibraryPath = '/home/martin/data/UNSAM/Tools/Violinplot-Matlab/'; % Where you have the library.
+addpath(violinPlotLibraryPath);
+for i = 1 : numBrainNetworks
+    figure;
+    violinplot(rmsBrainNetowrksSubjects(:,i),group);
+    ylabel('RMS Brain Netowrk Signal');
+    saveas(gca, [outputPath sprintf('ViolinPlotsRmsBrainNetwork_%d',i)], 'png');
+end
+%% SHOW BRAIN NETWORKS
+% Get AAL Rois first:
+aal = niftiread('./ROImask.nii');
+info=niftiinfo('./ROImask.nii');
+aal = double(aal);
+% MNI 152 to have a structural reference:
+mni152 = niftiread('./T1.nii');
+mni152 = double(mni152);
+infoMni152 = niftiinfo('./T1.nii');
+infoMni152.Datatype='double';
+% Now go through the networks:
+for i = 1 : numBrainNetworks
+    % Create an image for this brain network:
+    imageRoisBrainNetowrk{i} = zeros(size(aal));
+    imageRoisBrainNetowrk{i}(roisBrainNetworks{i}) = 1;
+    % Another with the contribution of each component:
+    imageBrainNetowrk{i} = zeros(size(aal));
+    for j = 1 : numel(roisBrainNetworks{i})
+        imageBrainNetowrk{i}(imageRoisBrainNetowrk{i} == roisBrainNetworks{i}(1)) = brainNetworks(roisBrainNetworks{i}(j),i);
+    end
+    
+    % Show the image slices using a reblue colormap (you nned to have the
+    % function in the same path):
+    figure;
+    cmapRedBlues = redblue();
+    % Range of values
+    maxValues = max(imageBrainNetowrk{i});
+    minValues = min(imageBrainNetowrk{i});
 
+    % Scale the image for visualization with labeloverlay:
+    scaledImage = uint8(round((imageBrainNetowrk{i}-minValues)./(maxValues-minValues).*63)+1);
+
+    %labels = labels .* mask;
+
+    for l = 10 : 5 : size(imageBrainNetowrk{i},3)-10
+        structMri = normalize(rot90(mni152(:,:,l)), 'range', [0 1]);
+        scaledSlice = rot90(scaledImage(:,:,l));
+
+        subplot(3,3,l/5-1)
+        imshow(labeloverlay(structMri, scaledSlice,'Colormap',cmapRedBlues));
+        
+    end
+    
+    
+    aux=round(minValues:((maxValues-minValues)/10):maxValues,2);
+    tiks=cell(1,11);
+    for k=1:11
+        tiks{k}=num2str(aux(k));
+    end
+    %tiks{6}=num2str(0);
+    
+    colorbar('Colormap',cmapRedBlues,'Position',[0.89 0.18 0.021 0.7],'TickLabels',tiks,'Limits',[0 max(labels(:))/64]);
+    
+    saveas(gcf,Slicename);
+
+    close all
+
+end
