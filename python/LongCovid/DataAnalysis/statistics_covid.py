@@ -187,80 +187,79 @@ def parcellation_statistics(df_parcellation, name_atlas='aparc'):
                                                     name_variable=variable, name_atlas=name_atlas)
     return df_statistics
 
-
-path_csv = "data"
-# Volumes
+if __name__ == '__main__':
 
 
-path_brain_volumes = os.path.join(path_csv, 'brain_volumes.csv')
 
-# General
-# Parcellation
-path_parcellation = os.path.join(path_csv, "parcellation.csv")
-path_parcellation_DKT = os.path.join(path_csv, "parcellation_DKT.csv")
+    path_brain_volumes = os.path.join(path_csv, 'brain_volumes.csv')
 
-# Segmentation
-path_segmentation = os.path.join(path_csv, "segmentation.csv")
+    # General
+    # Parcellation
+    path_parcellation = os.path.join(path_csv, "parcellation.csv")
+    path_parcellation_DKT = os.path.join(path_csv, "parcellation_DKT.csv")
 
-# Parcellation normalized to etiv 
-path_parcellation_etiv = os.path.join(path_csv, "parcellation_etiv.csv")
-path_parcellation_DKT_etiv = os.path.join(path_csv, "parcellation_DKT_etiv.csv")
+    # Segmentation
+    path_segmentation = os.path.join(path_csv, "segmentation.csv")
 
-# Segmentation normalized to etiv
-path_segmentation_etiv = os.path.join(path_csv, "segmentation_etiv.csv")
+    # Parcellation normalized to etiv
+    path_parcellation_etiv = os.path.join(path_csv, "parcellation_etiv.csv")
+    path_parcellation_DKT_etiv = os.path.join(path_csv, "parcellation_DKT_etiv.csv")
 
-# Cortical Thickness
-path_parcellation_thick = os.path.join(path_csv, "parcellation_thick.csv")
-path_parcellation_DKT_thick = os.path.join(path_csv, "parcellation_thick_DKT.csv")
+    # Segmentation normalized to etiv
+    path_segmentation_etiv = os.path.join(path_csv, "segmentation_etiv.csv")
 
-# Read dataframes 
-df_brainvol = pd.read_csv(path_brain_volumes)
+    # Cortical Thickness
+    path_parcellation_thick = os.path.join(path_csv, "parcellation_thick.csv")
+    path_parcellation_DKT_thick = os.path.join(path_csv, "parcellation_thick_DKT.csv")
 
-# Parcellation
-# Volumes
-df_parcellation = pd.read_csv(path_parcellation)
-df_parcellation_DKT = pd.read_csv(path_parcellation_DKT)
+    # Read dataframes
+    df_brainvol = pd.read_csv(path_brain_volumes)
 
-# Volumes to eTIV
-df_parcellation_etiv = pd.read_csv(path_parcellation_etiv)
-df_parcellation_DKT_etiv = pd.read_csv(path_parcellation_DKT_etiv)
+    # Parcellation
+    # Volumes
+    df_parcellation = pd.read_csv(path_parcellation)
+    df_parcellation_DKT = pd.read_csv(path_parcellation_DKT)
 
-# Cortical Thickness
-df_parcellation_thick = pd.read_csv(path_parcellation_thick)
-df_parcellation_DKT_thick = pd.read_csv(path_parcellation_DKT_thick)
+    # Volumes to eTIV
+    df_parcellation_etiv = pd.read_csv(path_parcellation_etiv)
+    df_parcellation_DKT_etiv = pd.read_csv(path_parcellation_DKT_etiv)
 
-# Segmentation
-df_segmentation = pd.read_csv(path_segmentation)
-df_segmentation_etiv = pd.read_csv(path_segmentation_etiv)
+    # Cortical Thickness
+    df_parcellation_thick = pd.read_csv(path_parcellation_thick)
+    df_parcellation_DKT_thick = pd.read_csv(path_parcellation_DKT_thick)
 
-
-# Parcellation
-# Columns with variables
-df_statistics = pd.DataFrame()
-
-# Segmentation Statistics
-df_statistics_segmentation=segmentation_statistics(df_segmentation)
-df_statistics = pd.concat([df_statistics,df_statistics_segmentation])
-
-# Brain Volumes
-df_statistics_brainvol=segmentation_statistics(df_brainvol)
-df_statistics = pd.concat([df_statistics,df_statistics_brainvol])
-
-# Parcellation Statistics
-# Volumes
-df_statistics_parcellation_volumes = parcellation_statistics(df_parcellation, name_atlas="aparc-a2009s-volume")
-df_statistics = pd.concat([df_statistics, df_statistics_parcellation_volumes])
+    # Segmentation
+    df_segmentation = pd.read_csv(path_segmentation)
+    df_segmentation_etiv = pd.read_csv(path_segmentation_etiv)
 
 
-df_statistics_parcellation_DKT_volumes = parcellation_statistics(df_parcellation_DKT, name_atlas="aparc-Desikan-volume")
-df_statistics = pd.concat([df_statistics, df_statistics_parcellation_DKT_volumes])
+    # Parcellation
+    # Columns with variables
+    df_statistics = pd.DataFrame()
 
-# Cortical Thickness
-df_statistics_parcellation_thick = parcellation_statistics(df_parcellation_thick, name_atlas="aparc-a2009s-thickness")
-df_statistics = pd.concat([df_statistics, df_statistics_parcellation_thick])
+    # Segmentation Statistics
+    df_statistics_segmentation=segmentation_statistics(df_segmentation)
+    df_statistics = pd.concat([df_statistics,df_statistics_segmentation])
 
-df_statistics_parcellation_DKT_thick = parcellation_statistics(df_parcellation_DKT_thick, name_atlas="aparc-Desikan-thickness")
-df_statistics = pd.concat([df_statistics,df_statistics_parcellation_DKT_thick])
+    # Brain Volumes
+    df_statistics_brainvol=segmentation_statistics(df_brainvol)
+    df_statistics = pd.concat([df_statistics,df_statistics_brainvol])
 
-df_statistics.to_csv('statistics.csv')
+    # Parcellation Statistics
+    # Volumes
+    df_statistics_parcellation_volumes = parcellation_statistics(df_parcellation, name_atlas="aparc-a2009s-volume")
+    df_statistics = pd.concat([df_statistics, df_statistics_parcellation_volumes])
+
+
+    df_statistics_parcellation_DKT_volumes = parcellation_statistics(df_parcellation_DKT, name_atlas="aparc-Desikan-volume")
+    df_statistics = pd.concat([df_statistics, df_statistics_parcellation_DKT_volumes])
+
+    # Cortical Thickness
+    df_statistics_parcellation_thick = parcellation_statistics(df_parcellation_thick, name_atlas="aparc-a2009s-thickness")
+    df_statistics = pd.concat([df_statistics, df_statistics_parcellation_thick])
+
+    df_statistics_parcellation_DKT_thick = parcellation_statistics(df_parcellation_DKT_thick, name_atlas="aparc-Desikan-thickness")
+    df_statistics = pd.concat([df_statistics,df_statistics_parcellation_DKT_thick])
+
+    df_statistics.to_csv('statistics.csv')
 
