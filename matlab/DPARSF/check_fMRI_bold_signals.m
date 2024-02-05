@@ -52,6 +52,16 @@ function fig = check_fMRI_bold_signals(roiSignals)
     % Concatenate:
     roiSingalsZ_concat = reshape(roiSignalsZ, [], 1);
     % Show power spectrum:
-    subplot(2,3,6) ;
+    subplot(2,3,5) ;
     pspectrum(roiSingalsZ_concat)
+
+    % Concatenate with interpolation between ROIs.
+    % We add a row to the matrix with (signal(roi,end)+signal(roi+1,1))/2
+    lastRow = [roiSignalsZ(1, 2:end) roiSignalsZ(1, end)]; % Repeat tthe last column.
+    lastRow = (lastRow + roiSignalsZ(end, 1:end))./2;
+    roiSignalsInterpZ = [roiSignalsZ; lastRow];
+    roiSingalsInterpZ_concat = reshape(roiSignalsInterpZ, [], 1);
+    % Show power spectrum:
+    subplot(2,3,6) ;
+    pspectrum(roiSingalsInterpZ_concat)
 end 

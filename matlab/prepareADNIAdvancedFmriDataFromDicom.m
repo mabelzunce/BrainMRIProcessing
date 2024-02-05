@@ -38,6 +38,10 @@ nameRsFmriInCollectionDataBase = {'Axial rsfMRI (Eyes Open)', 'Axial fcMRI', 'Ax
 nameRsFmriAdvancedInCollectionDataBase = {'Axial MB rsfMRI'};%'Axial MB rsfMRI (Eyes Open)';
 % Load adni dicom collection csv:
 adniCollectionData = readtable([adniPath filenameADNICollection]);
+%% ADNI MERGE
+% Load the adni merge csv with a summary of all the data
+adniMergeFullFilename = '/home/martin/data_imaging/ADNIdata/StudyInfo/Study_Info/ADNIMERGE.csv';
+adniMergeData = readtable(adniMergeFullFilename);
 %% LOAD PREVIOUS RUN
 % If didn't finish processing, load the workspace and to cntinue from the
 % PROCESS EACH CASE cell changing the i index.

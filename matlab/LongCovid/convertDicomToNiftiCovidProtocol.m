@@ -1,4 +1,4 @@
-clear allniftiExtension
+clear all
 close all
 
 dataPartitionPath = '/data/'; %'D:/'
@@ -12,14 +12,14 @@ addpath([dataPartitionPath 'UNSAM/Brain/dicm2nii/'])
 addpath(genpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/']))
 addpath([dataPartitionPath 'UNSAM/Brain/spm12/spm12/'])
 addpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/DPARSF/'])
-
+addpath('../FSL/')
 freesurferSubjectsPath =  [dataPartitionPath '/freesurfer_subjects/'];
 
 %% PATHS AND FILENAMES
 niftiExtension = '.nii.gz';
 dcmHeadersFilename = 'dcmHeaders.mat';
-dicomDataPath = [dataPartitionPath '/UNSAM/Brain/CovidProject/Estudio/MRI/'];
-preprocessedDataPath = [dataPartitionPath '/UNSAM/Brain/CovidProject/Estudio/PreprocessedMRI/'];
+dicomDataPath = [dataPartitionPath '/UNSAM/CovidProject/Estudio/MRI/'];
+preprocessedDataPath = [dataPartitionPath '/UNSAM/CovidProject/Estudio/PreprocessedMRI/'];
 niftiDataPath = [preprocessedDataPath '/Nifti/'];
 dparsfPath = [preprocessedDataPath '/DPARSF/'];
 if ~isdir(niftiDataPath)
@@ -80,6 +80,17 @@ if ~isdir(fslPreprocessedDataPath)
     mkdir(fslPreprocessedDataPath);
 end
 
+%% FOLDER FOR FREESURFER
+% This where the freesurfer processed data will be stored, not the
+% freesurfer_subject folder. It is used mainly to check if the freesurfer
+% data is already available.
+freesurferPreprocessedDataPath = [preprocessedDataPath '/Freesurfer/'];
+if ~isdir(freesurferPreprocessedDataPath)
+    mkdir(freesurferPreprocessedDataPath);
+end
+freesurferAparcAsegFilename = 'mri/aparc.a2009s+aseg.mgz';
+% Counter for subjects to process with freesurfer:
+indexFreesurfer = 0;
 %% PROCESS EACH CASE
 if isempty(casesToProcess)
     dirPaths = dir(dicomDataPath);
@@ -142,9 +153,11 @@ for i = 1 : numel(casesToProcess)
     fMRI_tE(i) = dcmTagsRsFmri{i}.EchoTime;
     if isfield(dcmTagsRsFmri{i}, 'MosaicRefAcqTimes')
         fMRI_sliceAcqTimes{i} = dcmTagsRsFmri{i}.MosaicRefAcqTimes;
+        fMRI_fslSliceOrcer{i} = dcmTagsRsFmri{i}.SliceTiming;
         [times, fMRI_sliceOrder{i}] = sort(dcmTagsRsFmri{i}.MosaicRefAcqTimes);
     else
         fMRI_sliceAcqTimes{i} = (0.5 - dcmTagsRsFmri{i}.SliceTiming) * dcmTagsRsFmri{i}.RepetitionTime;
+        fMRI_fslSliceOrcer{i} = dcmTagsRsFmri{i}.SliceTiming;
         [times, fMRI_sliceOrder{i}] = sort(fMRI_sliceAcqTimes{i});
     end
     image = niftiread([niftifMriFilenames{i}]);
@@ -153,7 +166,7 @@ for i = 1 : numel(casesToProcess)
     fMRI_voxelSize_mm(i,:) = info.PixelDimensions;
     fMRI_inPlanePhaseEncodingDirection(i,:) = dcmTagsRsFmri{i}.InPlanePhaseEncodingDirection;
     fMRI_unwarpDirection(i,:) = dcmTagsRsFmri{i}.UnwarpDirection;
-    fMRI_unwarpDirection(i,:) = dcmTagsRsFmri{i}.EffectiveEPIEchoSpacing;
+    fMRI_effectiveEPIEchoSpacing(i) = dcmTagsRsFmri{i}.EffectiveEPIEchoSpacing;
     if isfield(dcmTagsRsFmri{i}, 'PatientAge')
         age_years(i) = str2num(dcmTagsRsFmri{i}.PatientAge(1:end-1));
     else
@@ -214,15 +227,17 @@ for i = 1 : numel(casesToProcess)
         end
     end
     %% ASL
-    indexAsl = contains(sequencesPerSubject{i}, 'asl');    
-    nameAsl = sequencesPerSubject{i}{indexAsl};
-    dcmTagsASL{i} = getfield(dcmTags{i}.h,nameAsl);
-    niftiAslFilenames{i} = [niftiPathThisSubject nameAsl '.nii.gz'];
-    info = niftiinfo([niftiAslFilenames{i}]);
-    asl_tR(i) = dcmTagsASL{i}.RepetitionTime;
-    asl_tE(i) = dcmTagsASL{i}.EchoTime;
-    asl_imageSize_voxels(i,:) = info.ImageSize;
-    asl_voxelSize_mm(i,:) = info.PixelDimensions;
+    indexAsl = find(contains(sequencesPerSubject{i}, 'asl'));
+    if ~isempty(indexAsl)
+        nameAsl = sequencesPerSubject{i}{indexAsl};
+        dcmTagsASL{i} = getfield(dcmTags{i}.h,nameAsl);
+        niftiAslFilenames{i} = [niftiPathThisSubject nameAsl '.nii.gz'];
+        info = niftiinfo([niftiAslFilenames{i}]);
+        asl_tR(i) = dcmTagsASL{i}.RepetitionTime;
+        asl_tE(i) = dcmTagsASL{i}.EchoTime;
+        asl_imageSize_voxels(i,:) = info.ImageSize;
+        asl_voxelSize_mm(i,:) = info.PixelDimensions;
+    end
     %% CREATE FOLDERS FOR THIS SUBJECT DPARSF AND COPY FILES
     t1DparsfPathThisSubject = [t1DparsfPath '/' casesToProcess{i} '/'];
     fmriDparsfPathThisSubject = [fmriDparsfPath '/' casesToProcess{i} '/'];
@@ -245,8 +260,15 @@ for i = 1 : numel(casesToProcess)
         mkdir(fieldmapPhaseDparsfPathThisSubject);
         copyfile([niftiPathThisSubject nameFieldmappingPhase niftiExtension], fieldmapPhaseDparsfPathThisSubject);
     end
-    %% CREATE FREESURFER SCRIPT WITH ALL THE LINES
-    freesurferLines = [freesurferLines sprintf('recon-all -subject %s -i %s\n', casesToProcess{i}, [niftiPathThisSubject nameT1 niftiExtension])];
+    %% FREESURFER
+    % First check if freesurfer is already available.
+    freesurferPathThisSubject = [freesurferPreprocessedDataPath '/' casesToProcess{i} '/'];
+    if ~exist([freesurferPathThisSubject freesurferAparcAsegFilename])
+        % If does not exist, add it later to the script
+        indexFreesurfer = indexFreesurfer + 1;
+        freesurferSubjectsToProcess{indexFreesurfer} = casesToProcess{i};
+        freesurferT1FilenameToProcess{indexFreesurfer} = [niftiPathThisSubject nameT1 niftiExtension];        
+    end
 end
 %% SAVE DATA
 save(strcat([preprocessedDataPath 'mriInfo_' ], string(datetime('today','Format','y_MM_dd'))))
@@ -255,7 +277,7 @@ save(strcat([preprocessedDataPath 'mriInfo_' ], string(datetime('today','Format'
 %% PARAMTERS PER SEQUENCE
 tableT1 = table(casesToProcess', t1_voxelSize_mm, t1_imageSize_voxels, t1_tR', t1_tE');
 writetable(tableT1, [preprocessedDataPath 't1_parameters' ])
-tablefMRI = table(casesToProcess', fMRI_voxelSize_mm, fMRI_imageSize_voxels, fMRI_tR', fMRI_tE', fMRI_unwarpDirection);
+tablefMRI = table(casesToProcess', fMRI_voxelSize_mm, fMRI_imageSize_voxels, fMRI_tR', fMRI_tE', fMRI_effectiveEPIEchoSpacing', fMRI_unwarpDirection);
 writetable(tablefMRI, [preprocessedDataPath 'fMRI_parameters' ])
 tableFieldMapping = table(casesToProcess', permute(fieldMapping_voxelSize_mm(:,1,:), [1 3 2]), ... % TR and voxel sizes should be the same for all images
     permute(fieldMapping_imageSize_voxels(:,1,:), [1 3 2]), fieldMapping_tR(:,1,:), ...
@@ -263,39 +285,101 @@ tableFieldMapping = table(casesToProcess', permute(fieldMapping_voxelSize_mm(:,1
 writetable(tableFieldMapping, [preprocessedDataPath 'fieldMapping_parameters' ]);
 
 %% CREATE FREESURFER SCRIPT
-%freesurferLines = [freesurferLines ' -all\n'];
-% If in windows, save the script and run it later in Ubuntu for windows:
-fid = fopen(filenameFreesurferScript,'w');
-fprintf(fid,'#!/bin/bash \n');
-fprintf(fid, freesurferLines);
-for i = 1 : numel(casesToProcess)
-    fprintf(fid, 'recon-all -subject %s -all -openmp 12 \n', casesToProcess{i});
+if indexFreesurfer > 0
+    % If in windows, save the script and run it later in Ubuntu for windows:
+    fid = fopen(filenameFreesurferScript,'w');
+    fprintf(fid,'#!/bin/bash \n');
+    % First lines to prepare the data:
+    for i = 1 : numel(freesurferSubjectsToProcess)
+        fprintf(fid, 'recon-all -subject %s -i %s\n', freesurferSubjectsToProcess{i}, freesurferT1FilenameToProcess{i});
+    end
+    % Second the recon-all lines
+    for i = 1 : numel(freesurferSubjectsToProcess)
+        fprintf(fid, 'recon-all -subject %s -all -openmp 12 \n', freesurferSubjectsToProcess{i});
+    end
+    fclose(fid);
+else
+    disp('Freesurfer is already available for all the subjects.')
 end
-fclose(fid);
 %% PREPROCESSING fMRI WITH FSL
-
 for i = 1 : numel(casesToProcess)
-    fslPreprocessedDataPathThisSubject = [fslPreprocessedDataPath '/' casesToProcess '/fMRI/'];
+    fslPreprocessedDataPathThisSubject = [fslPreprocessedDataPath '/' casesToProcess{i} '/fMRI/'];
     if ~isdir(fslPreprocessedDataPathThisSubject)
         mkdir(fslPreprocessedDataPathThisSubject);
     end
     % Check if fieldmapping available:
-    if ~isempty(fieldMapping_indexMag1(i)) && ~isempty(fieldMapping_indexPhase)
+    if (fieldMapping_indexMag1(i) ~= 0) && (fieldMapping_indexPhase(i)~=0)
         filenameMag1 = niftiFieldMappingFilenames{i}{fieldMapping_indexMag1(i)};
         filenamePhase = niftiFieldMappingFilenames{i}{fieldMapping_indexPhase(i)};
         outputFilename = [fslPreprocessedDataPathThisSubject 'fmap_rads' niftiExtension];
         dTE = fieldMapping_deltaTE(i,fieldMapping_indexMag1(i));
-        output = FslPrepareFieldmap(filenamePhase, filenameMag1, outputFilename, dTE);
+        if ~exist(outputFilename)
+            output = FslPrepareFieldmap(filenamePhase, filenameMag1, outputFilename, dTE);
+        end
     end
 end
-%% FIELDMAPPING CORRECTION
-% Fsl field map correction:
-fsl_prepare_fieldmap SIEMENS images_3_gre_field_mapping images_4_gre_field_mapping fmap_rads 2.65
-% h.gre_field_mapping_2mm_e1.deltaTE
-fprintf('Parameters for fieldmap correction. TE1:%.1fms, TE2:%.1fms, dTE:%.1fms\n', h.gre_field_mapping_2mm_e1.EchoTime, ...
-    h.gre_field_mapping_2mm_e2.EchoTime, h.gre_field_mapping_2mm_e1.deltaTE);
+%% BET FOR EACH SUBJECT
+betParameters = '-R -f 0.35 -g 0  -o -m'; % Robust size and 0.3.
+offset_mm = 50; % use 5 cm above the image centre to start with the centre of the brain.
+for i = 1 : numel(casesToProcess)
+    fslBetDataPathThisSubject = [fslPreprocessedDataPath '/' casesToProcess{i} '/Bet/'];
+    if ~isdir(fslBetDataPathThisSubject)
+        mkdir(fslBetDataPathThisSubject);
+    end
+    % Get the name to check if the brain image is already available and not
+    % do it:
+    [filepath,name,ext] = fileparts(niftiT1Filenames{i});
+    if contains(name, '.')
+        [p, name, ext2] = fileparts(name);
+    else
+        ext2 = '';
+    end
 
-%% RUN DPARSF
+    % Start above the centre in z, as the protocol includes the neck.
+    centre = round(t1_imageSize_voxels(i,:)./2);
+    centre(3) = centre(3) + offset_mm./t1_voxelSize_mm(3);
+    if ~exist([fslBetDataPathThisSubject name '_brain' ext2 ext])
+        outputFilename = FslBet(niftiT1Filenames{i}, fslBetDataPathThisSubject, betParameters, centre);
+    end
+end
+%% SIENAX FOR EACH SUBJECT
+betParameters = '-R -f 0.35 -g 0  -o -m'; % Robust size and 0.35.
+offset_mm = 50;
+centre = round(t1_imageSize_voxels(i,:)./2);
+centre(3) = centre(3) + offset_mm./t1_voxelSize_mm(3);
+betParameters = [betParameters sprintf(' -c %d %d %d', centre(1), centre(2), centre(3))];
+fastParameters = [];
+outputSubdir = 'Sienax';
+offset_mm = 50; % use 5 cm above the image centre to start with the centre of the brain.
+for i = 1 : numel(casesToProcess)
+    fslSienaxDataPathThisSubject = [fslPreprocessedDataPath '/' casesToProcess{i} '/'];
+    if ~isdir(fslSienaxDataPathThisSubject)
+        mkdir(fslSienaxDataPathThisSubject);
+    end
 
-
-
+    % We need to copy the T1 to this directory:
+    copyfile(niftiT1Filenames{i}, fslSienaxDataPathThisSubject);
+    [filepath,name,ext] = fileparts(niftiT1Filenames{i});
+    if contains(name, '.')
+        [p, name, ext2] = fileparts(name);
+    else
+        ext2 = '';
+    end
+    inputFilenameT1 = [fslSienaxDataPathThisSubject name ext2 ext];
+    sienaxReportFilename = [fslSienaxDataPathThisSubject '/' outputSubdir '/' 'report.sienax'];
+    if ~exist(sienaxReportFilename)
+        FslSienax(inputFilenameT1, outputSubdir, betParameters, fastParameters);
+    end
+    [auxBrainVolumes, labels] = FslReadSienaxReport([fslSienaxDataPathThisSubject '/' outputSubdir '/' 'report.sienax']);
+    brainVolumes(:,:,i) = auxBrainVolumes;
+    delete(inputFilenameT1);
+end
+tableSienax.SubjectNames = casesToProcess';
+tableSienax.GreyMatterVolume = squeeze(brainVolumes(1,1,:));
+tableSienax.WhiteMatterVolume = squeeze(brainVolumes(2,1,:));
+tableSienax.BrainVolume = squeeze(brainVolumes(3,1,:));
+tableSienax.GreyMatterUnNormVolume = squeeze(brainVolumes(1,2,:));
+tableSienax.WhiteMatterUnNNormVolume = squeeze(brainVolumes(2,2,:));
+tableSienax.BrainUnNNormVolume = squeeze(brainVolumes(3,2,:));
+tableSienax = struct2table(tableSienax);
+writetable(tableSienax, [fslPreprocessedDataPath '/SienaxResults.csv']);

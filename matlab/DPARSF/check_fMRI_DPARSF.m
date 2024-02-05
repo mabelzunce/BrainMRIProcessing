@@ -272,7 +272,7 @@ function fig = check_fMRI_DPARSF (working_dir , subID , signals_dir , output, sa
         allsignals = horzcat( allsignals , signal ) ;
     end
     
-    [power , freq ] = pspectrum(allsignals,3) ;
+    [power , freq ] = pspectrum(allsignals,1./3) ;
     power = reshape ( power , 1,[] );
     sp10 = subplot(2,5,10) ;
     plot( freq , 10*log10(power)) ;
