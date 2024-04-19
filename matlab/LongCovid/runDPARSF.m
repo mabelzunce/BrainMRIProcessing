@@ -23,12 +23,12 @@ niftiPath = '/home/martin/data/UNSAM/CovidProject/Estudio/PreprocessedMRI/Nifti/
 dparsfDataPath = '/home/martin/data/UNSAM/CovidProject/Estudio/PreprocessedMRI/DPARSF_bandpass/';
 indexScanner = 1; % Siemens=1, GE=2, Philips=3.
 % Filename with the available MRI data:
-filenameMriInfo = [dataPath 'mriInfo_2023_09_05.mat'];
+filenameMriInfo = [dataPath 'mriInfo_2024_03_20.mat'];
 %% DATA INFO
 mriInfo = load(filenameMriInfo);
 %% CONFIG
 bandPassFilter = 1; %If not band pass, only high pass
-overwritePreprocessedData = 1; % if 0, if the preprocessed singals exist, it doesn't re run it.
+overwritePreprocessedData = 0; % if 0, if the preprocessed singals exist, it doesn't re run it.
 %% FOLDERS FOR DPARSF
 t1NameNifti = 'T1Img';
 fmriNameNifti = 'FunImg';
@@ -43,7 +43,7 @@ fieldmapMagNameNifti = 'Maginute1Img';
 fmriDparsfPath = [dparsfDataPath '/' fmriNameNifti '/'];
 fmriPreprocessedSignalsDparsfPath = [dparsfDataPath '/Results/ROISignals_FunImgARWSDCF/'];
 %% DPARSF CONFIG
-overwriteNifti = 1; % If 0 won't process existing Nfiti data in the DPARSF folder
+overwriteNifti = 0; % If 0 won't process existing Nfiti data in the DPARSF folder
 format = '.nii.gz';
 dcmHeadersFilename = 'dcmHeaders.mat';
 

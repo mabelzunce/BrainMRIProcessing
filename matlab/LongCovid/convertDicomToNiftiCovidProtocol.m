@@ -202,6 +202,7 @@ for i = 1 : numel(casesToProcess)
             fieldMapping_tR(i,j) = dcmTagsFieldMapping{i}{j}.RepetitionTime;
             fieldMapping_tE(i,j) = dcmTagsFieldMapping{i}{j}.EchoTime;
             fieldMapping_deltaTE(i,j) = dcmTagsFieldMapping{i}{j}.deltaTE;
+            fieldMapping_effectiveEPIEchoSpacing(i,j) = dcmTagsFieldMapping{i}{j}.EffectiveEPIEchoSpacing;
             fieldMapping_imageSize_voxels(i,j,:) = info.ImageSize;
             fieldMapping_voxelSize_mm(i,j,:) = info.PixelDimensions;
         end
@@ -307,28 +308,44 @@ for i = 1 : numel(casesToProcess)
     if ~isdir(fslPreprocessedDataPathThisSubject)
         mkdir(fslPreprocessedDataPathThisSubject);
     end
-    % Check if fieldmapping available:
+    % Check if fieldmapping available and correct:
     if (fieldMapping_indexMag1(i) ~= 0) && (fieldMapping_indexPhase(i)~=0)
         filenameMag1 = niftiFieldMappingFilenames{i}{fieldMapping_indexMag1(i)};
         filenamePhase = niftiFieldMappingFilenames{i}{fieldMapping_indexPhase(i)};
-        outputFilename = [fslPreprocessedDataPathThisSubject 'fmap_rads' niftiExtension];
+        outputPathFieldmap = fslPreprocessedDataPathThisSubject;
         dTE = fieldMapping_deltaTE(i,fieldMapping_indexMag1(i));
         if ~exist(outputFilename)
-            output = FslPrepareFieldmap(filenamePhase, filenameMag1, outputFilename, dTE);
+            output = FslPrepareFieldmap(filenamePhase, filenameMag1, outputPathFieldmap, dTE);
         end
     end
+    % Then do the preprocessing with Feat:
+    fMRI_sliceAcqTimes{i} = dcmTagsRsFmri{i}.MosaicRefAcqTimes;
+        fMRI_fslSliceOrcer{i} = dcmTagsRsFmri{i}.SliceTiming;
+        [times, fMRI_sliceOrder{i}] = sort(dcmTagsRsFmri{i}.MosaicRefAcqTimes);
 end
-%% BET FOR EACH SUBJECT
-betParameters = '-R -f 0.35 -g 0  -o -m'; % Robust size and 0.3.
+%% STRUCTURAL FOR EACH SUBJECT
+% Calls robustfov and the bet for the T1_mprage
+croppedT1Filename = 't1_robustfov.nii.gz';
+betParameters = '-R -f 0.35 -g 0  -o -m'; % Using robustFov and 0.35, owrks better than the centroid that we were using before.
 offset_mm = 50; % use 5 cm above the image centre to start with the centre of the brain.
 for i = 1 : numel(casesToProcess)
-    fslBetDataPathThisSubject = [fslPreprocessedDataPath '/' casesToProcess{i} '/Bet/'];
-    if ~isdir(fslBetDataPathThisSubject)
-        mkdir(fslBetDataPathThisSubject);
+    fslStructDataPathThisSubject = [fslPreprocessedDataPath '/' casesToProcess{i} '/Structural/'];
+    if ~isdir(fslStructDataPathThisSubject)
+        mkdir(fslStructDataPathThisSubject);
     end
+    
+    % Output robustfov:
+    outputRobustFovT1 = [fslStructDataPathThisSubject croppedT1Filename];
+    if ~exist(outputRobustFovT1)
+        % 1) Call robustfov
+        command = sprintf('robustfov -i %s -r %s', niftiT1Filenames{i}, ...
+            outputRobustFovT1);
+        out=system(command);
+    end
+
     % Get the name to check if the brain image is already available and not
     % do it:
-    [filepath,name,ext] = fileparts(niftiT1Filenames{i});
+    [filepath,name,ext] = fileparts(outputRobustFovT1);
     if contains(name, '.')
         [p, name, ext2] = fileparts(name);
     else
@@ -336,11 +353,18 @@ for i = 1 : numel(casesToProcess)
     end
 
     % Start above the centre in z, as the protocol includes the neck.
-    centre = round(t1_imageSize_voxels(i,:)./2);
-    centre(3) = centre(3) + offset_mm./t1_voxelSize_mm(3);
-    if ~exist([fslBetDataPathThisSubject name '_brain' ext2 ext])
-        outputFilename = FslBet(niftiT1Filenames{i}, fslBetDataPathThisSubject, betParameters, centre);
+    %centre = round(t1_imageSize_voxels(i,:)./2);
+    %centre(3) = centre(3) + offset_mm./t1_voxelSize_mm(3);
+    % WE DONT USE THE CTRE PARAMETER NOW.
+    if ~exist([fslStructDataPathThisSubject name '_brain' ext2 ext])
+        fslT1BetFilenames{i} = FslBet(outputRobustFovT1, fslStructDataPathThisSubject, betParameters, centre);
     end
+
+    % Call fast for segmentation:
+    if ~exist([fslStructDataPathThisSubject name '_brain' ext2 ext])
+        fslT1BetFilenames{i} = FslBet(outputRobustFovT1, fslStructDataPathThisSubject, betParameters, centre);
+    end
+    fast -B -I 10 -l 10 T1_brain.nii.gz
 end
 %% SIENAX FOR EACH SUBJECT
 betParameters = '-R -f 0.35 -g 0  -o -m'; % Robust size and 0.35.
@@ -383,3 +407,53 @@ tableSienax.WhiteMatterUnNNormVolume = squeeze(brainVolumes(2,2,:));
 tableSienax.BrainUnNNormVolume = squeeze(brainVolumes(3,2,:));
 tableSienax = struct2table(tableSienax);
 writetable(tableSienax, [fslPreprocessedDataPath '/SienaxResults.csv']);
+
+%% SIENAX - SECOND METHOD - FOR EACH SUBJECT
+clear brainVolumes
+clear tableSienax
+% In this approach instead of using bet with a custom center, first we
+% crop the fov of the image and then we call a standard BET.
+betParameters = '-R -f 0.35 -g 0  -o -m'; % Robust size and 0.35.
+fastParameters = [];
+croppedT1Filename = 't1_cropped.nii.gz';
+outputSubdir = 'Sienax2';
+offset_mm = 50; % use 5 cm above the image centre to start with the centre of the brain.
+for i = 1 : numel(casesToProcess)
+    fslSienaxDataPathThisSubject = [fslPreprocessedDataPath '/' casesToProcess{i} '/'];
+    if ~isdir(fslSienaxDataPathThisSubject)
+        mkdir(fslSienaxDataPathThisSubject);
+    end
+
+    % We need to copy the T1 to this directory:
+    copyfile(niftiT1Filenames{i}, fslSienaxDataPathThisSubject);
+    [filepath,name,ext] = fileparts(niftiT1Filenames{i});
+    if contains(name, '.')
+        [p, name, ext2] = fileparts(name);
+    else
+        ext2 = '';
+    end
+    inputFilenameT1 = [fslSienaxDataPathThisSubject name ext2 ext];
+    outputRobustFovT1 = [fslSienaxDataPathThisSubject croppedT1Filename];
+    
+    sienaxReportFilename = [fslSienaxDataPathThisSubject '/' outputSubdir '/' 'report.sienax'];
+    if ~exist(sienaxReportFilename)
+        % 1) Call
+        command = sprintf('robustfov -i %s -r %s', inputFilenameT1, ...
+            outputRobustFovT1);
+        out=system(command);
+        % 2) Siena
+        FslSienax(outputRobustFovT1, outputSubdir, betParameters, fastParameters);
+    end
+    [auxBrainVolumes, labels] = FslReadSienaxReport([fslSienaxDataPathThisSubject '/' outputSubdir '/' 'report.sienax']);
+    brainVolumes(:,:,i) = auxBrainVolumes;
+    delete(inputFilenameT1);
+end
+tableSienax.SubjectNames = casesToProcess';
+tableSienax.GreyMatterVolume = squeeze(brainVolumes(1,1,:));
+tableSienax.WhiteMatterVolume = squeeze(brainVolumes(2,1,:));
+tableSienax.BrainVolume = squeeze(brainVolumes(3,1,:));
+tableSienax.GreyMatterUnNormVolume = squeeze(brainVolumes(1,2,:));
+tableSienax.WhiteMatterUnNNormVolume = squeeze(brainVolumes(2,2,:));
+tableSienax.BrainUnNNormVolume = squeeze(brainVolumes(3,2,:));
+tableSienax = struct2table(tableSienax);
+writetable(tableSienax, [fslPreprocessedDataPath '/SienaxResults2.csv']);
