@@ -3,6 +3,7 @@ function out = FslSienax(filenameMri, outputSubdir, betOptions, ...
     fastOptions, filenameLesionsMask)
     if nargin == 4
         lesionsMask = [];
+        filenameLesionsMask = [];
     end
     [filepath,name,ext] = fileparts(filenameMri);
     if contains(name, '.')
@@ -14,6 +15,9 @@ function out = FslSienax(filenameMri, outputSubdir, betOptions, ...
     if isempty(fastOptions)
         command = sprintf('sienax %s -o %s -B "%s"', name, ...
             outputSubdir, betOptions);
+    elseif isempty(filenameLesionsMask)
+        command = sprintf('sienax %s -o %s -B "%s" -S "%s"', name, ...
+            outputSubdir, betOptions, fastOptions);
     else
         command = sprintf('sienax %s -o %s -B "%s" -S "%s" -lm %s', name, ...
             outputSubdir, betOptions, fastOptions, filenameLesionsMask);

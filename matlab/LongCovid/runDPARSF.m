@@ -18,12 +18,12 @@ load([ProgramPath,filesep,'Jobmats',filesep,'Template_CalculateInMNISpace_Tradit
 
 
 %% DATA PATHs
-dataPath = '/home/martin/data/UNSAM/CovidProject/Estudio/PreprocessedMRI/';
-niftiPath = '/home/martin/data/UNSAM/CovidProject/Estudio/PreprocessedMRI/Nifti/';
-dparsfDataPath = '/home/martin/data/UNSAM/CovidProject/Estudio/PreprocessedMRI/DPARSF_bandpass/';
+dataPath = '/home/martin/data_imaging/CovidProject/Estudio/PreprocessedMRI/';
+niftiPath = '/home/martin/data_imaging/CovidProject/Estudio/PreprocessedMRI/Nifti/';
+dparsfDataPath = '/home/martin/data_imaging/CovidProject/Estudio/PreprocessedMRI/DPARSF/';
 indexScanner = 1; % Siemens=1, GE=2, Philips=3.
 % Filename with the available MRI data:
-filenameMriInfo = [dataPath 'mriInfo_2024_03_20.mat'];
+filenameMriInfo = [dataPath 'mriInfoAndProcessing_2024_06_03.mat'];
 %% DATA INFO
 mriInfo = load(filenameMriInfo);
 %% CONFIG
@@ -138,6 +138,9 @@ if sum(indicesSameNumSlices) ~= numel(subjectNames)
     modeNumSlices = mode(numSlices);
     subjectNamesToProcess = subjectNames(indicesSameNumSlices);
     warning(['Not all the images have the same number of slices.This subjects won''t be processed:' subjectNames{~indicesSameNumSlices}]);
+else
+    modeNumSlices = numSlices(1);
+    subjectNamesToProcess = subjectNames;
 end
 indicesTimePoints = mode(timePoints);
 if sum(indicesTimePoints) ~= numel(subjectNames)

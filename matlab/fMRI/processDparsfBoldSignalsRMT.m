@@ -1,7 +1,7 @@
 clear all
 %close all
 dataPartitionPath = '/data/'; %'D:/'
-adniPartitionPath = '/data_imaging/'; %'F:/'
+imagingPartitionPath = '/data_imaging/'; %'F:/'
 %% ADD PATHS
 dpabiPath = [dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/'];
 addpath([dataPartitionPath 'UNSAM/Brain/dicm2nii/'])
@@ -10,10 +10,11 @@ addpath([dataPartitionPath 'UNSAM/Brain/spm12/spm12/'])
 addpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/DPARSF/'])
 %% DATA PATHS
 dataPath = [dataPartitionPath '/UNSAM/CEMSC3/ProcesamientoADNI/DataBase/DataBaseDrive-20231031T195909Z-001/DataBase/ADNI_fMRI_screening/AAL/'];
-roiSignalsPath = [dataPath '/ROISignals/'];
+dataPath = [imagingPartitionPath '/CovidProject/Estudio/PreprocessedMRI/DPARSF/'];
+roiSignalsPath = [dataPath '/Results/ROISignals_FunImgARWSDCF/'];
 %roiSignalsPath = '/home/martin/data/UNSAM/CEMSC3/ProcesamientoADNI/DataBase/ADNI3_Advanced_MB_fMRI/AAL/';
 csvFilename = [dataPath 'DataBaseSubjects.csv'];
-outputPath = [dataPartitionPath '/UNSAM/CEMSC3/ProcesamientoADNI/DataBase/RMT_Analysis/'];
+outputPath = [dataPartitionPath '/CovidProject/Estudio/fMRIAnalyisis/RMT/'];
 if ~isdir(outputPath)
     mkdir(outputPath)
 end

@@ -15,9 +15,10 @@ addpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/DPARSF/'])
 addpath(genpath('../'))
 %% PREPROCESSED DATA PATH
 dataPath = '/home/martin/data_imaging/ADNIdata/fMRI_first_batch_to_process_2023_04_27/Procesadas_2mm_highpass/';
+dataPath = '/home/martin/data_imaging/CovidProject/Estudio/PreprocessedMRI/DPARSF/';
 preprocessedFolder = 'FunImgARWSDCF';
 preprocessedDataPath = fullfile(dataPath, preprocessedFolder);
-indexScanner = 3; % Siemens=1, GE=2, Philips=3.
+indexScanner = 1; % Siemens=1, GE=2, Philips=3.
 %% OUTPUTPATH
 outputPath = [dataPath 'SignalsSchaefer2018_1000Parcels_17Networks/'];
 outputPathSignals = [outputPath '/ROISignals/'];
