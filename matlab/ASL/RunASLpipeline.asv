@@ -1,0 +1,50 @@
+clear all
+close all
+
+%% NAME SEQUENCES
+niftiExtension = '.nii.gz';
+dcmHeadersFilename = 'dcmHeaders.mat';
+
+%% ADD PATHS
+addpath('/home/sol/BrainTools/dicm2nii/')
+addpath(genpath( '/home/sol/BrainTools/ExploreASL/'));
+
+%% CONVERT DICOM TO A SPECIFIED FORMAT
+%addpath('/home/sol/BrainTools/ExploreASL/WorkInProgress/Import');
+%addpath('/home/sol/BrainTools/ExploreASL/WorkInProgress/Administration/');
+
+
+%% Convert DICOM to Nifti
+subject = 'CP0061';
+imagesDir = '/mnt/d87cc26d-5470-443c-81c1-e09b68ee4730/COVID/ASL_BIDS/Organized_DICOM/';
+niftiDir = '/mnt/d87cc26d-5470-443c-81c1-e09b68ee4730/COVID/ASL_BIDS/Nifti/BIDS';
+
+% Define the source and destination directories
+subjectBIDS = ['sub-' subject];  
+subjectDirDICOM = [imagesDir subject '/DICOM/'];
+subjectDirNifti = [imagesDir subject '/Nifti/'];
+
+converterOut = dicm2nii(subjectDirDicom, niftiDir, 'bids'); 
+
+subjectDICOMHeaders = [subjectDirNifti subjectBIDS '/' dcmHeadersFilename];
+%% Read Tags 
+ASLTagName = ['sub_' subject '_asl' ];
+dcmTagsSubject = load(subjectDICOMHeaders);
+dcmTagsASL = getfield(dcmTagsSubject.h,ASLTagName);
+%ConvertDicomFolderStructure_CarefulSlow(subjectDir)
+
+
+
+
+%% PATH SUBJECT DICOM DIR 
+%subjectDir = '/mnt/d87cc26d-5470-443c-81c1-e09b68ee4730/COVID/ASL_BIDS/Raw_DICOM/CP0060';
+%% COPY TO NEW DIR 
+% % Copy the directory
+% copyfile(subjectDir, destDir);
+% 
+% % Verify that the copying process was successful
+% if exist(destDir, 'dir')
+%     disp('Directory copied successfully.');
+% else
+%     disp('There was an issue copying the directory.');
+% end
