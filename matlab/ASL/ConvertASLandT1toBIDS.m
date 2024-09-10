@@ -39,6 +39,15 @@ addpath(genpath( '/home/sol/BrainTools/ExploreASL/'));
 
 
 %% Convert DICOM to Nifti
+
+%% Delete participants.tsv
+filenameParticipantsTSV= [niftiDir 'participants.tsv'];
+if exist(filenameParticipantsTSV, 'file') == 2
+    % Delete the file
+    delete(filenameParticipantsTSV);
+end
+
+
 % Define the source and destination directories
 for i = 1 : numel(casesToProcess)
     subject = char(casesToProcess(i));
@@ -48,17 +57,24 @@ for i = 1 : numel(casesToProcess)
     %subjectDirNifti = [niftiDir subject '/Nifti/'];
     
     converterOut = dicm2nii(subjectDirDICOM, niftiDir, 'bids'); 
+
+    % Rename T2 with FLAIR
+    subjectT2NameJson = [subjectBIDSDir 'anat/' subjectBIDS '_T2w.json'];
+    subjectFLAIRNameJson = [subjectBIDSDir 'anat/' subjectBIDS '_FLAIR.json'];
+
+    subjectT2NameImage = [subjectBIDSDir 'anat/' subjectBIDS '_T2w.nii.gz'];
+    subjectFLAIRNameImage= [subjectBIDSDir 'anat/' subjectBIDS '_FLAIR.nii.gz'];
     
+    movefile(subjectT2NameJson, subjectFLAIRNameJson);
+    movefile(subjectT2NameImage, subjectFLAIRNameImage);
+
+    % Modify Json
     subjectDICOMHeaders =  [subjectBIDSDir dcmHeadersFilename];
 
     % Read Tags 
     ASLTagName = ['sub_' subject '_asl' ];
     dcmTagsSubject = load(subjectDICOMHeaders);
     dcmTagsASL = getfield(dcmTagsSubject.h,ASLTagName);
-
-    % Extract necessary fields 
-    repetitionTime = dcmTagsASL.RepetitionTime/1000; 
-    repetitionTime = dcmTagsASL.RepetitionTime/1000; 
 
 
     % Read and Modify Json
@@ -93,7 +109,7 @@ for i = 1 : numel(casesToProcess)
     ASLJsonData.AcquisitionNumber = dcmTagsASL.AcquisitionNumber; 
     ASLJsonData.SpacingBetweenSlices = dcmTagsASL.SpacingBetweenSlices; 
     ASLJsonData.SAR = dcmTagsASL.SAR; 
-    ASLJsonData.RepetitionTime = dcmTagsASL.RepetitionTime; 
+    ASLJsonData.RepetitionTime = dcmTagsASL.RepetitionTime / 1000; 
     %ASLJsonData.BolusDuration = dcmTagsASL.CSAImageHeaderInfo.QCData(4)/1000;
     %ASLJsonData.InversionTime = dcmTagsASL.CSAImageHeaderInfo.QCData(5)/1000;
     ASLJsonData.DwellTime = dcmTagsASL.RealDwellTime * 1000;
@@ -137,19 +153,20 @@ end
 %% MODIFIED PARTICIPANTS TSV
 
 % Read the table
-filename = [niftiDir 'participants.tsv'];
-tbl = readtable(filename, 'FileType', 'text', 'Delimiter', '\t');
 
-% Identify IDs that do not start with 'sub-'
-mask = ~startsWith(tbl.participant_id, 'sub-');
+tbl = readtable(filenameParticipantsTSV, 'FileType', 'text', 'Delimiter', '\t');
 
-% Only modify and write back if there are changes
-if any(mask)
-    tbl.participant_id(mask) = strcat('sub-', tbl.participant_id(mask));
-    writetable(tbl, filename, 'FileType', 'text', 'Delimiter', '\t');
+% Check if the first element starts with 'sub-'
+if ~ startsWith(tbl.participant_id{1}, 'sub-')
+    % Identify IDs that do not start with 'sub-'
+    mask = ~startsWith(tbl.participant_id, 'sub-');
+
+    % Only modify and write back if there are changes
+    if any(mask)
+        tbl.participant_id(mask) = strcat('sub-', tbl.participant_id(mask));
+        writetable(tbl, filenameParticipantsTSV, 'FileType', 'text', 'Delimiter', '\t');
+    end
 end
-
-
 %% RUN ASL PIPELINE
 %[x] = ExploreASL('/mnt/d87cc26d-5470-443c-81c1-e09b68ee4730/Sol/COVID/ASL_BIDS/Nifti/BIDS/', 0, 1);
 
