@@ -4,34 +4,70 @@ function prettyJson = prettyPrintJson(jsonString)
     prettyJson = '';  % Initialize the pretty-printed JSON string
     
     i = 1;
+    insideString = false;  % Track whether we are inside a string
+
     while i <= length(jsonString)
         char = jsonString(i);
         
         switch char
+            case '"'
+                % Toggle insideString flag when we encounter a quote
+                insideString = ~insideString;
+                prettyJson = append(prettyJson, char);
+                
             case '{'
-                level = level + 1;
-                prettyJson = append(prettyJson, char, newline, repmat(indent, 1, level));
+                if ~insideString
+                    level = level + 1;
+                    prettyJson = append(prettyJson, char, newline, repmat(indent, 1, level));
+                else
+                    prettyJson = append(prettyJson, char);
+                end
                 
             case '['
-                level = level + 1;
-                prettyJson = append(prettyJson, char, newline, repmat(indent, 1, level));
+                if ~insideString
+                    level = level + 1;
+                    prettyJson = append(prettyJson, char, newline, repmat(indent, 1, level));
+                else
+                    prettyJson = append(prettyJson, char);
+                end
                 
             case '}'
-                level = level - 1;
-                prettyJson = append(prettyJson, newline, repmat(indent, 1, level), char);
+                if ~insideString
+                    level = level - 1;
+                    prettyJson = append(prettyJson, newline, repmat(indent, 1, level), char);
+                else
+                    prettyJson = append(prettyJson, char);
+                end
                 
             case ']'
-                level = level - 1;
-                prettyJson = append(prettyJson, newline, repmat(indent, 1, level), char);
+                if ~insideString
+                    level = level - 1;
+                    prettyJson = append(prettyJson, newline, repmat(indent, 1, level), char);
+                else
+                    prettyJson = append(prettyJson, char);
+                end
                 
             case ','
-                prettyJson = append(prettyJson, char, newline, repmat(indent, 1, level));
+                if ~insideString
+                    prettyJson = append(prettyJson, char, newline, repmat(indent, 1, level));
+                else
+                    prettyJson = append(prettyJson, char);
+                end
                 
             case ':'
-                prettyJson = append(prettyJson, char, ' ');
+                if ~insideString
+                    prettyJson = append(prettyJson, char, ' ');
+                else
+                    prettyJson = append(prettyJson, char);
+                end
                 
             otherwise
-                prettyJson = append(prettyJson, char);
+                % Escape special characters like newline (\n) if inside a string
+                if insideString && char == newline
+                    prettyJson = append(prettyJson, '\\n');
+                else
+                    prettyJson = append(prettyJson, char);
+                end
         end
         
         i = i + 1;

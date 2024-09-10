@@ -6,7 +6,7 @@ niftiExtension = '.nii.gz';
 dcmHeadersFilename = 'dcmHeaders.mat';
 
 imagesDir = '/mnt/d87cc26d-5470-443c-81c1-e09b68ee4730/Sol/COVID/ASL_BIDS/Organized_DICOM/';
-niftiDir = '/mnt/d87cc26d-5470-443c-81c1-e09b68ee4730/Sol/COVID/ASL_BIDS/Nifti/BIDS/';
+niftiDir = '/mnt/d87cc26d-5470-443c-81c1-e09b68ee4730/Sol/COVID/ASL_BIDS/Nifti/BIDS/rawdata/';
 
 %% CREATE DATASET DESCRIPTION JSON 
 datasetDescriptionJsonPath = [niftiDir 'dataset_description.json'];
@@ -58,6 +58,8 @@ for i = 1 : numel(casesToProcess)
 
     % Extract necessary fields 
     repetitionTime = dcmTagsASL.RepetitionTime/1000; 
+    repetitionTime = dcmTagsASL.RepetitionTime/1000; 
+
 
     % Read and Modify Json
     subjectASLJson =  [subjectBIDSDir 'perf/' subjectBIDS '_asl.json' ];
@@ -68,38 +70,88 @@ for i = 1 : numel(casesToProcess)
     fclose(fid);
 
     ASLJsonData = jsondecode(str);
-    ASLJsonData.RepetitionTimePreparation = repetitionTime; 
+    %ASLJsonData.RepetitionTimePreparation = repetitionTime; 
     ASLJsonData.ArterialSpinLabelingType = 'PASL';
+    
     %ASLJsonData.PostLabelingDelay	=
     ASLJsonData.BackgroundSuppression	= true; 
     ASLJsonData.M0Type = 'Absent'; 
     ASLJsonData.TotalAcquiredPairs	= 10; 
-    %ASLJsonData.MagneticFieldStrength =
+    ASLJsonData.BolusCutOffFlag = true; 
+    ASLJsonData.BolusCutOffDelayTime = dcmTagsASL.CSAImageHeaderInfo.QCData(4)/1000; % cambiar esto
+    ASLJsonData.PostLabelingDelay = dcmTagsASL.CSAImageHeaderInfo.QCData(5)/1000; % cambiar esto
+    ASLJsonData.BolusCutOffTechnique  =  'QUIPSS-II';
+    ASLJsonData.MagneticFieldStrength = dcmTagsASL.MagneticFieldStrength; 
+    ASLJsonData.ProcedureStepDescription = dcmTagsASL.BodyPartExamined;
     
+    ASLJsonData.BodyPartExamined = dcmTagsASL.BodyPartExamined;
+    ASLJsonData.AcquisitionNumber = dcmTagsASL.AcquisitionNumber;
+    ASLJsonData.StationName = dcmTagsASL.StationName; 
+    ASLJsonData.PatientPosition = dcmTagsASL.PatientPosition;
+    ASLJsonData.SoftwareVersions = dcmTagsASL.SoftwareVersion;
+    ASLJsonData.ProtocolName = dcmTagsASL.ProtocolName;
+    ASLJsonData.AcquisitionNumber = dcmTagsASL.AcquisitionNumber; 
+    ASLJsonData.SpacingBetweenSlices = dcmTagsASL.SpacingBetweenSlices; 
+    ASLJsonData.SAR = dcmTagsASL.SAR; 
+    ASLJsonData.RepetitionTime = dcmTagsASL.RepetitionTime; 
+    %ASLJsonData.BolusDuration = dcmTagsASL.CSAImageHeaderInfo.QCData(4)/1000;
+    %ASLJsonData.InversionTime = dcmTagsASL.CSAImageHeaderInfo.QCData(5)/1000;
+    ASLJsonData.DwellTime = dcmTagsASL.RealDwellTime * 1000;
+    ASLJsonData.ProcedureStepDescription =  dcmTagsASL.PerformedProcedureStepDescription;
+    ASLJsonData.ProcedureStepDescription =  dcmTagsASL.PerformedProcedureStepDescription;
+
     % Write JSON 
     modifiedJson = jsonencode(ASLJsonData);
-    %prettyJsonString = prettyPrintJson(modifiedJson);
+    prettyJsonString = prettyPrintJson(modifiedJson);
     
     % Write the modified JSON back to the file
     fid = fopen(subjectASLJson, 'w');
     if fid == -1
         error('Cannot open file for writing.');
     end
-    fwrite(fid, modifiedJson, 'char');
+    %fwrite(fid, modifiedJson, 'char');
+    fwrite(fid, prettyJsonString, 'char');
     fclose(fid);
 
+    % Create aslcontext_tsv 
+    aslContextFile = [subjectBIDSDir 'perf/' subjectBIDS '_aslcontext.tsv'];
+    
+    volumeType = repmat({'label', 'control'}, 1, 10);
+    volumeType = volumeType';
 
+    fileID = fopen(aslContextFile, 'w');
+
+    % Write header
+    fprintf(fileID, 'volume_type\n');
+    
+    % Write the data
+    for j = 1:length(volumeType)
+        fprintf(fileID, '%s\n', volumeType{j});
+    end
+    
+    % Close the file
+    fclose(fileID);
 end
 
 
 %% MODIFIED PARTICIPANTS TSV
+
+% Read the table
 filename = [niftiDir 'participants.tsv'];
-tbl = readtable(filename , 'FileType', 'text', 'Delimiter', '\t');
+tbl = readtable(filename, 'FileType', 'text', 'Delimiter', '\t');
 
+% Identify IDs that do not start with 'sub-'
 mask = ~startsWith(tbl.participant_id, 'sub-');
-tbl.participant_id(mask) = strcat('sub-', tbl.participant_id(mask));
 
-writetable(tbl, filename, 'FileType', 'text', 'Delimiter', '\t');
+% Only modify and write back if there are changes
+if any(mask)
+    tbl.participant_id(mask) = strcat('sub-', tbl.participant_id(mask));
+    writetable(tbl, filename, 'FileType', 'text', 'Delimiter', '\t');
+end
+
+
+%% RUN ASL PIPELINE
+%[x] = ExploreASL('/mnt/d87cc26d-5470-443c-81c1-e09b68ee4730/Sol/COVID/ASL_BIDS/Nifti/BIDS/', 0, 1);
 
 %% PATH SUBJECT DICOM DIR 
 %ConvertDicomFolderStructure_CarefulSlow(subjectDir)
