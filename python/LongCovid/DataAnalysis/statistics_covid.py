@@ -58,12 +58,8 @@ def write_a_row_with_statistics(df_statistics, covid_values, control_values, nam
     df_statistics = pd.concat([df_statistics, df_stat])
     
     return df_statistics
-    
-    
 
-
-
-def segmentation_statistics(df_segmentation, name_atlas='aseg'): 
+def segmentation_statistics(df_segmentation, name_atlas='aseg', etiv = False):
     '''"A DataFrame with statistics for each region of the segmentation atlas'''
 
     df_statistics = pd.DataFrame()    
@@ -92,6 +88,9 @@ def segmentation_statistics(df_segmentation, name_atlas='aseg'):
     # Statistics volumes both hemisphere (lh, rh)
     for variable in df_segmentation_volumes:
         name_atlas_volume  = f'{name_atlas}-volume'
+
+        if etiv == True:
+            name_atlas_volume = f'{name_atlas_volume}-etiv'
         
         # Right Hemisphere
         control_values_rh = df_segmentation.loc[(df_segmentation['Data'] == 'Grupo Control'), f'Right-{variable}']
@@ -124,6 +123,10 @@ def segmentation_statistics(df_segmentation, name_atlas='aseg'):
     for variable in df_segmentation_global:
         
         name_atlas_global  = f'{name_atlas}-global'
+
+        if etiv == True:
+            name_atlas_global = f'{name_atlas_global}-etiv'
+
         control_values = df_segmentation.loc[(df_segmentation['Data'] == 'Grupo Control'), variable]
         control_values = control_values.reset_index(drop=True)
 
@@ -136,12 +139,6 @@ def segmentation_statistics(df_segmentation, name_atlas='aseg'):
 
     
     return df_statistics
-    
-   
-
-
-
-
 
 def parcellation_statistics(df_parcellation, name_atlas='aparc'): 
     '''"A DataFrame with statistics for each region of the parcellation atlas'''
@@ -188,8 +185,7 @@ def parcellation_statistics(df_parcellation, name_atlas='aparc'):
     return df_statistics
 
 if __name__ == '__main__':
-
-
+    path_csv = "/home/sol/COVID/CSV_subjects"
 
     path_brain_volumes = os.path.join(path_csv, 'brain_volumes.csv')
 
@@ -249,7 +245,6 @@ if __name__ == '__main__':
     # Volumes
     df_statistics_parcellation_volumes = parcellation_statistics(df_parcellation, name_atlas="aparc-a2009s-volume")
     df_statistics = pd.concat([df_statistics, df_statistics_parcellation_volumes])
-
 
     df_statistics_parcellation_DKT_volumes = parcellation_statistics(df_parcellation_DKT, name_atlas="aparc-Desikan-volume")
     df_statistics = pd.concat([df_statistics, df_statistics_parcellation_DKT_volumes])

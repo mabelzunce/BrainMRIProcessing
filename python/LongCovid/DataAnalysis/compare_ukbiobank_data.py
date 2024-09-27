@@ -55,7 +55,7 @@ def intensity_regions_bar_chart(variables, value_variables, errors, specific_leg
     plt.subplots_adjust(right=0.80)
 
 
-def extract_values_errors(df, variables):
+def extract_values_errors_ukbiobank(df_ukbiobank, variables):
 
     controls_variable_1, controls_error_variable_1 = [], []
     cases_variable_1, cases_error_variable_1 = [], []
@@ -91,101 +91,106 @@ def extract_values_errors(df, variables):
 
 
 
-ukbiobank_data = "/home/sol/COVID/UKBiobank/GroupAverages_0101_new.txt"
-ukbiobank_plots = "/home/sol/COVID/UKBiobank/Analysis"
-
-headers = ["controls_mean_1","controls_std_1",
-           "controls_mean_2", "controls_std_2",
-           "cases_mean_1", "cases_std_1",
-           "cases_mean_2", "cases_std_2",
-           "variable"]
-
-df_ukbiobank = pd.read_csv(ukbiobank_data, sep=" ", skiprows=[0])
-df_ukbiobank.columns = headers
-
-# All important variables
-compare_variables = ["IDP_T1_SIENAX_brain-normalised_volume", "IDP_T1_SIENAX_brain-unnormalised_volume",
-                     "IDP_T1_SIENAX_grey_normalised_volume", "IDP_T1_SIENAX_grey_unnormalised_volume",
-                     "aseg_global_volume_BrainSeg", "aseg_global_volume_BrainSegNotVent", "aseg_global_volume_TotalGray",
-                     "aseg_global_volume_EstimatedTotalIntraCranial"]
-
-# Total Brain Volume variables
-brain_volume_variables = ["IDP_T1_SIENAX_brain-normalised_volume", "IDP_T1_SIENAX_brain-unnormalised_volume",
-                   "aseg_global_volume_BrainSegNotVent"]
-
-
-# Gray Matter Volume variables
-grey_matter_variables = ["IDP_T1_SIENAX_grey_normalised_volume","IDP_T1_SIENAX_grey_unnormalised_volume",
-                          "aseg_global_volume_TotalGray"]
-
-
-freesurfer_ratios = ["aseg_global_volume-ratio_BrainSegVol-to-eTIV",
-                     "aseg_global_volume-ratio_MaskVol-to-eTIV"]
-
-
-values_brain_volume, error_brain_volume = extract_values_errors(df_ukbiobank, brain_volume_variables)
-values_GM_volume, error_GM_volume = extract_values_errors(df_ukbiobank, grey_matter_variables)
-
-name_bar_charts = ["Controls 1", "Cases 1", "Controls 2", "Cases 2"]
-name_variables_brain_volume = ["SIENAX_brain_volume\n(normalised)", "SIENAX_brain_volume\n(unnormalised)",
-                   "Freesurfer BrainSegNotVent"]
-
-name_variables_grey_matter_volume = ["SIENAX_grey_matter_volume\n(normalised)", "SIENAX_grey_matter_volume\n(unnormalised)",
-                   "Freesurfer Total Gray Matter"]
-
-# All
-plt.figure()
-intensity_regions_bar_chart(brain_volume_variables, values_brain_volume, error_brain_volume,
-                            general_legend = name_variables_brain_volume, specific_legend=name_bar_charts,
-                            title="FreeSurfer vs Sienax Brain Volume")
-# Set figure size
-fig = plt.gcf()  # Get the current figure
-fig.set_size_inches(16, 8)  # Set the size in inches (width, height)
-
-
-plt.savefig(os.path.join(ukbiobank_plots, "all_charts_brain_volume.png"))
-
-plt.figure()
-intensity_regions_bar_chart(grey_matter_variables, values_GM_volume, error_GM_volume,
-                            general_legend = name_variables_grey_matter_volume, specific_legend=name_bar_charts,
-                            title="FreeSurfer vs Sienax Grey Matter Volume")
-
-# Set figure size
-fig = plt.gcf()  # Get the current figure
-fig.set_size_inches(16, 8)  # Set the size in inches (width, height)
-
-plt.savefig(os.path.join(ukbiobank_plots, "all_charts_gm_volume.png"))
 
 
 
-# Only Second point in the time
-values_brain_volume2 = values_brain_volume[2:4]
-error_brain_volume2 = error_brain_volume[2:4]
+if __name__ == '__main__':
+    ukbiobank_data = "/home/sol/COVID/UKBiobank/GroupAverages_0101_new.txt"
+    ukbiobank_plots = "/home/sol/COVID/UKBiobank/Analysis"
 
-values_GM_volume2 = values_GM_volume[2:4]
-error_GM_volume2 =error_GM_volume[2:4]
+    headers = ["controls_mean_1","controls_std_1",
+               "controls_mean_2", "controls_std_2",
+               "cases_mean_1", "cases_std_1",
+               "cases_mean_2", "cases_std_2",
+               "variable"]
 
-plt.figure()
-intensity_regions_bar_chart(brain_volume_variables, values_brain_volume2, error_brain_volume2,
-                            general_legend = name_variables_brain_volume, specific_legend=name_bar_charts,
-                            title="FreeSurfer vs Sienax Brain Volume")
-# Set figure size
-fig = plt.gcf()  # Get the current figure
-fig.set_size_inches(16, 8)  # Set the size in inches (width, height)
+    df_ukbiobank = pd.read_csv(ukbiobank_data, sep=" ", skiprows=[0])
+    df_ukbiobank.columns = headers
+
+    # All important variables
+    compare_variables = ["IDP_T1_SIENAX_brain-normalised_volume", "IDP_T1_SIENAX_brain-unnormalised_volume",
+                         "IDP_T1_SIENAX_grey_normalised_volume", "IDP_T1_SIENAX_grey_unnormalised_volume",
+                         "aseg_global_volume_BrainSeg", "aseg_global_volume_BrainSegNotVent", "aseg_global_volume_TotalGray",
+                         "aseg_global_volume_EstimatedTotalIntraCranial"]
+
+    # Total Brain Volume variables
+    brain_volume_variables = ["IDP_T1_SIENAX_brain-normalised_volume", "IDP_T1_SIENAX_brain-unnormalised_volume",
+                       "aseg_global_volume_BrainSegNotVent", "aseg_global_volume_BrainSegNotVent"]
 
 
-plt.savefig(os.path.join(ukbiobank_plots, "second_point_brain_volume.png"))
+    # Gray Matter Volume variables
+    grey_matter_variables = ["IDP_T1_SIENAX_grey_normalised_volume","IDP_T1_SIENAX_grey_unnormalised_volume",
+                              "aseg_global_volume_TotalGray"]
+
+
+    freesurfer_ratios = ["aseg_global_volume-ratio_BrainSegVol-to-eTIV",
+                         "aseg_global_volume-ratio_MaskVol-to-eTIV"]
+
+
+    values_brain_volume, error_brain_volume = extract_values_errors_ukbiobank(df_ukbiobank, brain_volume_variables)
+    values_GM_volume, error_GM_volume = extract_values_errors_ukbiobank(df_ukbiobank, grey_matter_variables)
+
+    name_bar_charts = ["Controls 1", "Cases 1", "Controls 2", "Cases 2"]
+    name_variables_brain_volume = ["SIENAX_brain_volume\n(normalised)", "SIENAX_brain_volume\n(unnormalised)",
+                       "Freesurfer BrainSegNotVent", "Freesurfer BrainSeg"]
+
+    name_variables_grey_matter_volume = ["SIENAX_grey_matter_volume\n(normalised)", "SIENAX_grey_matter_volume\n(unnormalised)",
+                       "Freesurfer Total Gray Matter"]
+
+    # All
+    plt.figure()
+    intensity_regions_bar_chart(brain_volume_variables, values_brain_volume, error_brain_volume,
+                                general_legend = name_variables_brain_volume, specific_legend=name_bar_charts,
+                                title="FreeSurfer vs Sienax Brain Volume")
+    # Set figure size
+    fig = plt.gcf()  # Get the current figure
+    fig.set_size_inches(16, 8)  # Set the size in inches (width, height)
+
+
+    plt.savefig(os.path.join(ukbiobank_plots, "all_charts_brain_volume.png"))
+
+    plt.figure()
+    # Gray Matter
+    intensity_regions_bar_chart(grey_matter_variables, values_GM_volume, error_GM_volume,
+                                general_legend = name_variables_grey_matter_volume, specific_legend=name_bar_charts,
+                                title="FreeSurfer vs Sienax Grey Matter Volume")
+
+    # Set figure size
+    fig = plt.gcf()  # Get the current figure
+    fig.set_size_inches(16, 8)  # Set the size in inches (width, height)
+
+    plt.savefig(os.path.join(ukbiobank_plots, "all_charts_gm_volume.png"))
+
+
+
+    # Only Second point in the time
+    values_brain_volume2 = values_brain_volume[2:4]
+    error_brain_volume2 = error_brain_volume[2:4]
+
+    values_GM_volume2 = values_GM_volume[2:4]
+    error_GM_volume2 =error_GM_volume[2:4]
+
+    plt.figure()
+    intensity_regions_bar_chart(brain_volume_variables, values_brain_volume2, error_brain_volume2,
+                                general_legend = name_variables_brain_volume, specific_legend=name_bar_charts,
+                                title="FreeSurfer vs Sienax Brain Volume")
+    # Set figure size
+    fig = plt.gcf()  # Get the current figure
+    fig.set_size_inches(16, 8)  # Set the size in inches (width, height)
+
+
+    plt.savefig(os.path.join(ukbiobank_plots, "second_point_brain_volume.png"))
 
 
 
 
-plt.figure()
-intensity_regions_bar_chart(grey_matter_variables, values_GM_volume2, error_GM_volume2,
-                            general_legend = name_variables_grey_matter_volume, specific_legend=name_bar_charts,
-                            title="FreeSurfer vs Sienax Grey Matter Volume")
+    plt.figure()
+    intensity_regions_bar_chart(grey_matter_variables, values_GM_volume2, error_GM_volume2,
+                                general_legend = name_variables_grey_matter_volume, specific_legend=name_bar_charts,
+                                title="FreeSurfer vs Sienax Grey Matter Volume")
 
-# Set figure size
-fig = plt.gcf()  # Get the current figure
-fig.set_size_inches(16, 8)  # Set the size in inches (width, height)
+    # Set figure size
+    fig = plt.gcf()  # Get the current figure
+    fig.set_size_inches(16, 8)  # Set the size in inches (width, height)
 
-plt.savefig(os.path.join(ukbiobank_plots, "second_point_gm_volume.png"))
+    plt.savefig(os.path.join(ukbiobank_plots, "second_point_gm_volume.png"))
