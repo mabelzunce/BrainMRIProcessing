@@ -46,7 +46,6 @@ mkdir -p $T2_dir/lesions
 #Move the inclusion mask to T2_FLAIR/lesions directory
 mv $T1_dir/T1_unbiased_bianca_mask.nii.gz $T1_dir/T1_unbiased_ventmask.nii.gz $T1_dir/T1_unbiased_brain_mask.nii.gz $T2_dir/lesions/
 
-
 #Generate the configuration file to run Bianca
 echo $T1_dir/T1_unbiased_brain.nii.gz $T2_dir/T2_FLAIR_unbiased.nii.gz $T1_dir/transforms/T1_to_MNI_linear.mat > $T2_dir/lesions/conf_file.txt;
 
@@ -54,9 +53,13 @@ echo $T1_dir/T1_unbiased_brain.nii.gz $T2_dir/T2_FLAIR_unbiased.nii.gz $T1_dir/t
 $FSLDIR/bin/bianca --singlefile=$T2_dir/lesions/conf_file.txt --querysubjectnum=1 --brainmaskfeaturenum=1 --loadclassifierdata=$data/bianca_class_data --matfeaturenum=3 --featuresubset=1,2 -o $T2_dir/lesions/bianca_mask
 
 #Apply the inclusion mask to BIANCA output to get the final thresholded mask
-fslmaths $T2_dir/lesions/bianca_mask -mul $T2_dir/lesions/T1_unbiased_bianca_mask.nii.gz -thr 0.8 -bin $T2_dir/lesions/final_mask
+fslmaths $T2_dir/lesions/bianca_mask -mul $T2_dir/lesions/T1_unbiased_bianca_mask.nii.gz -thr 0.7 -bin $T2_dir/lesions/final_mask
 
 #Get the volume of the lesions
 fslstats $T2_dir/lesions/final_mask -V | awk '{print $1}' > $T2_dir/lesions/volume.txt
 
-
+# Total Volume and number of clusters
+bianca_cluster_stats $T2_dir/lesions/final_mask.nii.gz 0 10 > $T2_dir/lesions/volume_cluster_10.txt
+bianca_cluster_stats $T2_dir/lesions/final_mask.nii.gz 0 5 > $T2_dir/lesions/volume_cluster_7.txt
+bianca_cluster_stats $T2_dir/lesions/final_mask.nii.gz 0 7 > $T2_dir/lesions/volume_cluster_5.txt
+bianca_cluster_stats $T2_dir/lesions/final_mask.nii.gz 0 3 > $T2_dir/lesions/volume_cluster_3.txt

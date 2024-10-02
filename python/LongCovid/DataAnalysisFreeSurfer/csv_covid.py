@@ -44,6 +44,7 @@ def convert_mm3_to_cm3_segmentation(df_segmentation):
     return df_segmentation
 
 
+
 def new_subject_to_df(df, csv_subject, type_df='brainvol', name_subject="Unknown", data=None, hemisphere="UK", thickness = False):
     """Append a row with the information of the subject to the dataframe"""
 
@@ -144,6 +145,15 @@ def create_df(path_subjects, df_brainvol, df_parcellation, df_segmentation, df_p
                                             name_subject=subject,
                                             data=name_subjects)
     return df_brainvol, df_parcellation, df_segmentation, df_parcellation_thick, df_parcellation_DKT, df_parcellation_thick_DKT
+
+def exclude_subject_by_id(df, subjects_exclude):
+
+    for subject in subjects_exclude:
+        df = df[df['subject'] != subject]
+
+    return df
+
+
 
 if __name__ == '__main__':
 

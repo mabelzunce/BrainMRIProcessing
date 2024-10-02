@@ -6,9 +6,9 @@ cd $2 || exit # Move to Processed directory
 data=$2/../Data
 templates=$2/../Templates/
 
-T1_orig=$1
-T1_dir=$2/T1 # T1 dir
-[ -d "T1" ] || mkdir $T1_dir # If not exist create T1
+  T1_orig=$1
+  T1_dir=$2/T1 # T1 dir
+  [ -d "T1" ] || mkdir $T1_dir # If not exist create T1
 
 cd $T1_dir
 
@@ -18,10 +18,12 @@ cp $T1_orig T1_orig.nii.gz
 head_top=`${FSLDIR}/bin/robustfov -i $T1_orig | grep -v Final | head -n 1 | awk '{print $5}'`
 ${FSLDIR}/bin/fslmaths $T1_orig -roi 0 -1 0 -1 $head_top 170 0 1 T1_tmp
 
-#Brain Extraction with ANTs
-antsBrainExtraction.sh -d 3 -a T1_tmp.nii.gz -e $templates/T_template0.nii.gz -m $templates/T_template0_BrainCerebellumProbabilityMask.nii.gz -o T1_tmp -c 3x1x2x3
+# Brain extraction (BET)
+bet T1_tmp T1_tmp_brain -R -f 0.35 -g 0 -o -m
 
-${FSLDIR}/bin/immv T1_tmpBrainExtractionBrain T1_tmp_brain
+#Brain Extraction with ANTs
+# antsBrainExtraction.sh -d 3 -a T1_tmp.nii.gz -e $templates/T_template0.nii.gz -m $templates/T_template0_BrainCerebellumProbabilityMask.nii.gz -o T1_tmp -c 3x1x2x3
+# ${FSLDIR}/bin/immv T1_tmpBrainExtractionBrain T1_tmp_brain
 
 #Reduces the FOV of T1_orig by calculating a registration from T1_tmp_brain to ssref and applies it to T1_orig
 ${FSLDIR}/bin/standard_space_roi T1_tmp_brain T1_tmp2 -maskNONE -ssref $FSLDIR/data/standard/MNI152_T1_1mm_brain -altinput $T1_orig -d
@@ -76,9 +78,9 @@ else
     echo "WARNING: There was no bias field estimation. Bias field correction cannot be applied to T1."
 fi
 
-#Run First
-mkdir T1_first
-
-#Creates a link inside T1_first to ./T1_unbiased_brain.nii.gz (In the present working directory)
-ln -s ../T1_unbiased_brain.nii.gz T1_first/T1_unbiased_brain.nii.gz
-${FSLDIR}/bin/run_first_all -i T1_first/T1_unbiased_brain -b -o T1_first/T1_first
+##Run First
+#mkdir T1_first
+#
+##Creates a link inside T1_first to ./T1_unbiased_brain.nii.gz (In the present working directory)
+#ln -s ../T1_unbiased_brain.nii.gz T1_first/T1_unbiased_brain.nii.gz
+#${FSLDIR}/bin/run_first_all -i T1_first/T1_unbiased_brain -b -o T1_first/T1_first
