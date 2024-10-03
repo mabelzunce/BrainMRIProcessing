@@ -14,6 +14,10 @@ volunteersExcelFilename = fullfile(studyDataPath, 'VoluntariosProyectoCovidProlo
 fslPreprocessedDataPath = [imagingPartitionPath '/CovidProject2/PreprocessedMRI/FSL/'];
 freesurferBrainVolumesPath = [resultsPath '/AnatomicalMRI/freesurfer/'];
 outputPath = [resultsPath 'BrainMorphometry/'];
+parcelationVolFilename = 'parcellation_volumes_clean_all.csv';
+parcelationThicknessFilename = 'parcellation_thickness_clean_all.csv';
+segmentationFilename = 'segmentation_all.csv';
+brainVolumes = 'brain_volumes_all.csv';
 if ~exist(outputPath)
     mkdir(outputPath);
 end
@@ -48,7 +52,7 @@ colFAS = 75;
 subjectsToExclude = {'CP0011', 'CP0015',''}; % 11 (foreign language) and 15 (elder and probaly with some form of dementia). Remove empty names.
 %% VOLUNTEERS TABLE
 %volunteersTable = readtable(volunteersExcelFilename, 'NumHeaderLines', 1);
-volunteersTable = readtable(volunteersExcelFilename, 'Range', 'A2:AI168');%, 'HeaderLines', 1);
+volunteersTable = readtable(volunteersExcelFilename, 'Range', 'A2:AI220');%, 'HeaderLines', 1);
 % Remove data to exclude:
 indicesToExclude = [];
 for i = 1 : numel(subjectsToExclude)
@@ -377,6 +381,8 @@ for i = 1 :numel(nameTests)
     [pKW_cognPerc{i}, annovaTab_cognPerc{i}, stats_cognPerc{i}] = kruskalwallis(allCognitiveTests_perc(:,i), categorical(groupTests));
     [h_cognPerformance(i),p_cognPerformance(i),test_cognPerformance(i),df_cognPerformance(i)] = chi2test2(uint8(categorical(allCognitiveTests_perf(indicesCovidCogn,i))), ...
         uint8(categorical(allCognitiveTests_perf(indicesControlCogn,i))), 0.05);
+    %pause;
+    close all
 end
 %%
 groupIndices = {indicesControlCogn, indicesCovidCogn};
@@ -467,18 +473,227 @@ for i = 1 :numel(nameTests)
     [pKW_cognPerc{i}, annovaTab_cognPerc{i}, stats_cognPerc{i}] = kruskalwallis(testsResults_perc(:,i), categorical(groupTests(indicesSubjectsWithCT)));
     [h_cognPerformance(i),p_cognPerformance(i),test_cognPerformance(i),df_cognPerformance(i)] = chi2test2(uint8(categorical(testsResults_performance(indicesCovidCT,i))), ...
         uint8(categorical(testsResults_performance(indicesControlCT,i))), 0.05);
+    close all
 end
 %% CORRELATION SYMPTOMS AND COGNITIVE
 sumNoNormalCovid = sum(~strcmp(testsResults_performance(indicesCovidCT,:), 'normal'),2);
-meanResultsPercCovid = mean(testsResults_perc(indicesCovidCT,:),2);
+meanResultsPercCovid = mean(testsResults_perc(indicesCovidCT,:),2,"omitnan");
 indiceColCognitiveSymptoms = [8 9 11 12];
-sumSymptoms = sum(symptom(indicesCovidQ,:)==1,2);
 sumCognSymptoms = sum(symptom(indicesCovidQ,indiceColCognitiveSymptoms)==1,2);
-mdl = fitglm(symptom(indicesCovidQ,indiceColCognitiveSymptoms)==1,sumNoNormal>2,'Distribution','binomial');
+mdl = fitglm(symptom(indicesCovidQ,indiceColCognitiveSymptoms)==1,sumNoNormalCovid>2,'Distribution','binomial');
 
-mdl = fitglm(symptom(indicesCovidQ,indiceColCognitiveSymptoms)==1,meanResultsPercCovid)
-mdl = fitglm(sumSymptoms,meanResultsPercCovid);
+%mdl = fitglm(symptom(indicesCovidQ,indiceColCognitiveSymptoms)==1,meanResultsPercCovid)
+mdl2 = fitglm(sumCognSymptoms,meanResultsPercCovid);
 figure; hist3([sumNoNormalCovid, sumCognSymptoms]);
+% Correlation
+[r1,p1] = corr(sumCognSymptoms, meanResultsPercCovid);
+allWithMocaCovid = ~isnan(testsResults_perc(indicesCovidCT, end));
+mocaValidCovid = testsResults_perc(indicesCovidCT, end);
+mocaValidCovid = mocaValidCovid(allWithMocaCovid);
+[r_moca,p_moca] = corr(sumCognSymptoms(allWithMocaCovid), mocaValidCovid);
+%% MENTAL HEALTH SCALES
+phq9_score = cognitiveTestsTable.Var34;
+phq9_rendimiento = cognitiveTestsTable.Var35;
+gad7_score = cognitiveTestsTable.Var36;
+gad7_rendimiento = cognitiveTestsTable.Var37;
+indicesHasPhq = ~isnan(phq9_score);
+hasSaliva = find(strcmp(cognitiveTestsTable.Var39,'Si'));
+subjectNamesSaliva = subjectNames(hasSaliva);
+indicesCovidSaliva = strcmp(groupTests(hasSaliva), 'COVID');
+indicesControlSaliva = strcmp(groupTests(hasSaliva), 'CONTROL');
+% Kruskal wallis and chi2 for depression
+[pKW_phq9, annovaTab_phq9, stats_phq9] = kruskalwallis(phq9_score(hasSaliva), categorical(groupTests(hasSaliva)));
+[h__phq9,p_phq9,test_phq9,df_c_phq9] = chi2test2(uint8(categorical(phq9_rendimiento(hasSaliva(indicesCovidSaliva)))), ...
+    uint8(categorical(phq9_rendimiento(hasSaliva(indicesControlSaliva)))), 0.05);
+
+% Kruskal wallis and chi2 for anxiety
+[pKW_gad7, annovaTab_gad7, stats_gad7] = kruskalwallis(gad7_score(hasSaliva), categorical(groupTests(hasSaliva)));
+[h_gad7,p_gad7,test_gad7,df_gad7] = chi2test2(uint8(categorical(gad7_rendimiento(hasSaliva(indicesCovidSaliva)))), ...
+    uint8(categorical(gad7_rendimiento(hasSaliva(indicesControlSaliva)))), 0.05);
+%% LOAD BIOMARKERS
+%cognitiveTestsTable = readtable(summaryExcelFilename,'Sheet','EvaluacionCognitiva', 'NumHeaderLines', 2);
+%mriReportsTable = readtable(summaryExcelFilename,'Sheet','InformeResonancia', 'NumHeaderLines', 0);
+biomarkers = readtable(summaryExcelFilename,'Sheet','Biomarcadores');
+% Remove data to exclude:
+indicesToExclude = [];
+for i = 1 : numel(subjectsToExclude)
+    ind=find(strcmp(subjectsToExclude{i}, biomarkers.ID)>0);
+    if ~isempty(ind)
+       indicesToExclude = [indicesToExclude ind];
+    end
+end
+biomarkers(indicesToExclude,:) = [];
+
+allNamesBiomarkers = biomarkers.ID;
+if sum(strcmp(allNamesBiomarkers, subjectNamesWithCT)) ~= numel(subjectNamesWithCT)
+    error('Lists for biomarkers do not match');
+end
+hasBiomarker = ~isnan(biomarkers.M6aNg_ml);
+biomarkersTable = biomarkers(hasBiomarker,:);
+subjectNamesBiomarkers = subjectNames(hasBiomarker);
+groupBiomarkers = group(hasBiomarker);
+M6aNg_ml = biomarkers.M6aNg_ml(hasBiomarker);
+BDNFNg_ml = biomarkers.BDNFNg_ml(hasBiomarker);
+NFLNg_mL = biomarkers.NFLNg_mL(hasBiomarker);
+% Kruskal wallis and chi2 for biomarkers
+[pKW_m6, annovaTab_m6, stats_m6] = kruskalwallis(M6aNg_ml, categorical(groupBiomarkers));
+[pKW_bdnfng, annovaTab_bdnfng, stats_bdnfng] = kruskalwallis(BDNFNg_ml, categorical(groupBiomarkers));
+[pKW_nflng, annovaTab_nflng, stats_nflng] = kruskalwallis(NFLNg_mL, categorical(groupBiomarkers));
+
+age_biomarker = age_years(hasBiomarker);
+anxiety_biomarker = gad7_score(hasBiomarker);
+depression_biomarker = phq9_score(hasBiomarker);
+group_biomarker = categorical(groupBiomarkers);
+sex_biomarker = categorical(gender(hasBiomarker));
+tbl = table(group_biomarker, age_biomarker, sex_biomarker, anxiety_biomarker, depression_biomarker);  
+%[p(i), table{i}, stats{i}] = anova(tbl, "metric ~ group + age + eTIV");
+for i = 1 : 3
+    metric = table2array(biomarkersTable(:,2+i));
+    anovaTable{i} = anova(tbl, metric,categoricalFactors=["group_biomarker", "sex_biomarker"]);
+    p(i) = anovaTable{i}.stats.pValue(1);
+    p_age(i) = anovaTable{i}.stats.pValue(2);
+    p_sex(i) = anovaTable{i}.stats.pValue(3);
+    p_anxiety(i) = anovaTable{i}.stats.pValue(4);
+    p_depression(i) = anovaTable{i}.stats.pValue(5);
+end
+%%
+covid_biomarker = strcmp(groupBiomarkers, 'COVID');
+control_biomarker = strcmp(groupBiomarkers, 'CONTROL');
+i = 2;
+figure;
+plot(anxiety_biomarker(covid_biomarker),table2array(biomarkersTable(covid_biomarker,2+i)),'o')
+hold on;
+plot(anxiety_biomarker(control_biomarker),table2array(biomarkersTable(control_biomarker,2+i)),'x')
+%% FREESURFER VOLUMES
+indicesToExclude = [];
+volumes = readtable([freesurferBrainVolumesPath, brainVolumes]);
+for i = 1 : numel(subjectsToExclude)
+    ind=find(strcmp(subjectsToExclude{i}, volumes.subject)>0);
+    if ~isempty(ind)
+       indicesToExclude = [indicesToExclude ind'];
+    end
+end
+volumes(indicesToExclude,:) = [];
+% Sort by name
+volumes = sortrows(volumes,1);
+% Get volumes with biomarkers
+volumesBiomarkers = table;
+indicesBiomarkerWithVolume = [];
+j = 1
+for i = 1 : numel(subjectNamesBiomarkers)
+    indexVolume = find(strcmp(subjectNamesBiomarkers{i}, volumes.subject));
+    if ~isempty(indexVolume)
+        volumesBiomarkers(j,:) = volumes(indexVolume,:);
+        indicesBiomarkerWithVolume = [indicesBiomarkerWithVolume i];
+        j = j+1;
+    else
+        warning(sprintf('Subject %s without volumetric data.', subjectNamesBiomarkers{i}));
+    end
+end
+% Tests for correlation between regions and biomarkers:
+age_volume = age_biomarker(indicesBiomarkerWithVolume);
+anxiety_volume = anxiety_biomarker(indicesBiomarkerWithVolume);
+depression_volume = depression_biomarker(indicesBiomarkerWithVolume);
+group_volume = group_biomarker(indicesBiomarkerWithVolume);
+sex_volume = sex_biomarker(indicesBiomarkerWithVolume);
+M6aNg_ml_volume = M6aNg_ml(indicesBiomarkerWithVolume);
+BDNFNg_volume = BDNFNg_ml(indicesBiomarkerWithVolume);
+
+tbl = table(group_biomarker, age_biomarker, sex_biomarker, anxiety_biomarker, depression_biomarker);
+indicesRegionsSignificant = [];
+for i = 2 : size(volumesBiomarkers,2)-2
+    volume_region = table2array(volumesBiomarkers(:,i));
+    tbl = table(age_volume, anxiety_volume, depression_volume, group_volume, sex_volume,M6aNg_ml_volume, BDNFNg_volume, volume_region); % Last column, response variable.
+    mdl0{i} = fitlm(tbl, 'M6aNg_ml_volume~volume_region');%+genderSienax_years');
+    p_m6_vol(i) = mdl0{i}.Coefficients.pValue(2);
+    [corr_m6_vol(i), p_corr_m6_vol(i)]= corr(M6aNg_ml_volume,volume_region);
+
+    mdl1{i} = fitlm(tbl, 'BDNFNg_volume~volume_region');%+genderSienax_years');
+    BDNFNg_m6_vol(i) = mdl1{i}.Coefficients.pValue(2);
+    [corr_BDNFNg_vol(i), p_corr_BDNFNg_vol(i)]= corr(BDNFNg_volume,volume_region);
+    if BDNFNg_m6_vol(i) < 0.05
+        indicesRegionsSignificant = [indicesRegionsSignificant i];
+    end
+end
+%%  WHITE MATTER
+wmhVolumesPath = '/home/martin/data/UNSAM/CovidProject2/DataAnalysis/AnatomicalMRI/WMH/';
+wmhTable = readtable([wmhVolumesPath, 'bianca_data_thr_0_7.0_cluster_5_deep.csv']);
+for i = 1 : numel(subjectsToExclude)
+    ind=find(strcmp(subjectsToExclude{i}, wmhTable.ID)>0);
+    if ~isempty(ind)
+       indicesToExclude = [indicesToExclude ind'];
+    end
+end
+wmhTable(indicesToExclude,:) = [];
+
+% Sort by name
+wmhTable = sortrows(wmhTable,1);
+% Get volumes with biomarkers
+wmhBiomarkers = table;
+indicesBiomarkerWithWMH = [];
+j = 1
+for i = 1 : numel(subjectNamesBiomarkers)
+    indexWMH= find(strcmp(subjectNamesBiomarkers{i}, wmhTable.ID));
+    if ~isempty(indexWMH)
+        wmhBiomarkers(j,:) = wmhTable(indexWMH,:);
+        indicesBiomarkerWithWMH = [indicesBiomarkerWithWMH i];
+        j = j+1;
+    else
+        warning(sprintf('Subject %s without WMH data.', subjectNamesBiomarkers{i}));
+    end
+end
+M6aNg_ml_wmh = M6aNg_ml(indicesBiomarkerWithWMH);
+BDNFNg_wmh = BDNFNg_ml(indicesBiomarkerWithWMH);
+anxiety_wmh = anxiety_biomarker(indicesBiomarkerWithWMH);
+depression_wmh = depression_biomarker(indicesBiomarkerWithWMH);
+
+
+[corr_m6_wmh, p_corr_wmh]= corr(M6aNg_ml_wmh,wmhBiomarkers.TotalVolumeOfClusters);
+[corr_BDNFNg_wmh, p_corr_BDNFNg_wmh]= corr(BDNFNg_wmh,wmhBiomarkers.TotalVolumeOfClusters);
+
+fitlm(BDNFNg_wmh,wmhBiomarkers.TotalVolumeOfClusters)
+fitlm(M6aNg_ml_wmh,wmhBiomarkers.TotalVolumeOfClusters)
+
+fitlm(anxiety_wmh,wmhBiomarkers.TotalVolumeOfClusters)
+fitlm(depression_wmh,wmhBiomarkers.TotalVolumeOfClusters)
+
+%% FREESURFER SEGMENTATION
+indicesToExclude = [];
+segmentation = readtable([freesurferBrainVolumesPath, segmentationFilename]);
+for i = 1 : numel(subjectsToExclude)
+    ind=find(strcmp(subjectsToExclude{i}, segmentation.subject)>0);
+    if ~isempty(ind)
+       indicesToExclude = [indicesToExclude ind'];
+    end
+end
+segmentation(indicesToExclude,:) = [];
+% Sort by name
+segmenation = sortrows(segmentation,1);
+% Get volumes with biomarkers
+volumesBiomarkers = table;
+indicesBiomarkerWithVolume = [];
+j = 1
+for i = 1 : numel(subjectNamesBiomarkers)
+    indexSegmentation = find(strcmp(subjectNamesBiomarkers{i}, segmenation.subject));
+    if ~isempty(indexSegmentation)
+        volumesBiomarkers(j,:) = volumes(indexVolume,:);
+        indicesBiomarkerWithVolume = [indicesBiomarkerWithVolume i];
+        j = j+1;
+    else
+        warning(sprintf('Subject %s without volumetric data.', subjectNamesBiomarkers{i}));
+    end
+end
+
+% Check if the names match:
+if sum(~strcmp(segmenation.subject, summaryTable.ID)) > 0
+    error('Tables dont match');
+end
+if sum(~strcmp(segmenation.Grupo, summaryTable.Grupo)) > 0
+    error('Tables dont match');
+end
+if sum(~strcmp(segmenation.Edad, summaryTable.Edad)) > 0
+    warning(sprintf('Tables dont match for age of % subject', sum(~strcmp(segmenation.Edad, summaryTable.Edad))));
+end
 %% MRI REPORTS
 indicesSubjectsWithMriReport = strcmp(mriReportsTable.ReporteResonancia,'Si');
 for i = 1 : numel(subjectNamesMriReportsWithReport)

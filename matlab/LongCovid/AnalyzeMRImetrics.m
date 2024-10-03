@@ -2,17 +2,17 @@ clear all
 close all
 
 dataPartitionPath = '/data/'; %'D:/'
-adniPartitionPath = '/data_imaging/'; %'F:/'
+imagingPartitionPath = '/data_imaging/'; %'F:/'
 % Load data:
 loadData = 0;
 
 %% PATHS AND FILENAMES
-studyDataPath = '../';
-resultsPath = '../DataAnalysis/';
-summaryExcelFilename = fullfile(studyDataPath, 'RespuestasCuestionarioEvaluacionCognitivaResonancia.xlsx');
+studyDataPath = [dataPartitionPath '/UNSAM/CovidProject2/'];
+resultsPath = [studyDataPath '/DataAnalysis/'];
+summaryExcelFilename = fullfile(studyDataPath, 'Respuestas.xlsx');
 volunteersExcelFilename = fullfile(studyDataPath, 'VoluntariosProyectoCovidProlongado.xlsx');
-fslPreprocessedDataPath = '/home/martin/data/UNSAM/CovidProject/Estudio/PreprocessedMRI/FSL/';
-freesurferBrainVolumesPath = '/home/martin/data/UNSAM/CovidProject/Estudio/DataAnalysis/AnatomicalMRI/freesurfer/';
+fslPreprocessedDataPath = [imagingPartitionPath '/CovidProject2/PreprocessedMRI/FSL/'];
+freesurferBrainVolumesPath = [resultsPath '/AnatomicalMRI/freesurfer/'];
 outputPath = [resultsPath 'BrainMorphometry/'];
 if ~exist(outputPath)
     mkdir(outputPath);
@@ -25,21 +25,21 @@ shortBroupNamesForPlots = {'C', 'LC'};
 % Groups:
 colsDemographicData = 4:7;
 colsCovidData = 8:36;
-colsLongCovidSymptoms = 24:35;
-colsHealthHistory = 37:54;
-% Individual:
-colId = 1; colGroup = 2; colAge = 4; colGender = 5; colHeight = 6; colWeight = 7; colVaccinated = 8; colNumVaccines = 9; 
-colDateLastVaccine = 10; colCovidInfection = 11; colNumCovidInfections = 12; colDateFirstInfection = 13; colNumVaccinesCovidInfection = 14;
-colDateLastSymptomsCovid = 15; colAdmitted = 16; colDateAdmitted = 17; colDateDischarged = 18; colAdmittedAfterCovid = 19; colNumAdmittedAfterCovid = 20;
-colAdmittedICU = 21; colFeelRecovered = 22; colDiagnosedWithLongCovid = 23;
-% Persisten symptoms post Covid:
-colHeadache = 24; colFatigue = 25; colAnosmia = 26; colLossTaste = 27; colDisnea = 28; colMuscleWeakness = 29; colMusclePain = 30;
-colFocusConfussion = 31; colTalkingComm = 32; colSleeping = 33; colMemory = 34; colAttention = 35; colOtherSymptoms = 36;
-% Health background:
-colHypertension = 37; colDiabetes = 38; colAsma = 39; colCholesterol = 40; colHeartAttack = 41;
-colAngina = 42; colThrombosis = 43; colBloodPressureMedication = 44; colAspirine = 45; colBloodThinner = 46;
-colOtherHealthIssues = 47; colOtherHealthIssuesDescr = 48; colSmoker = 49; colCigarettesPerDay = 50; colYearsSmoking = 51;
-colYearsExSmoker = 52; colDrinksAlcohol = 53; colAlcoholUnitsPerWeek = 54;
+colsLongCovidSymptoms = 25:36;
+colsHealthHistory = 38:55;
+% % Individual:
+% colId = 1; colGroup = 2; colAge = 4; colGender = 5; colHeight = 6; colWeight = 7; colVaccinated = 8; colNumVaccines = 9; 
+% colDateLastVaccine = 10; colCovidInfection = 11; colNumCovidInfections = 12; colDateFirstInfection = 13; colNumVaccinesCovidInfection = 14;
+% colDateLastSymptomsCovid = 15; colAdmitted = 16; colDateAdmitted = 17; colDateDischarged = 18; colAdmittedAfterCovid = 19; colNumAdmittedAfterCovid = 20;
+% colAdmittedICU = 21; colFeelRecovered = 22; colDiagnosedWithLongCovid = 23;
+% % Persisten symptoms post Covid:
+% colHeadache = 24; colFatigue = 25; colAnosmia = 26; colLossTaste = 27; colDisnea = 28; colMuscleWeakness = 29; colMusclePain = 30;
+% colFocusConfussion = 31; colTalkingComm = 32; colSleeping = 33; colMemory = 34; colAttention = 35; colOtherSymptoms = 36;
+% % Health background:
+% colHypertension = 37; colDiabetes = 38; colAsma = 39; colCholesterol = 40; colHeartAttack = 41;
+% colAngina = 42; colThrombosis = 43; colBloodPressureMedication = 44; colAspirine = 45; colBloodThinner = 46;
+% colOtherHealthIssues = 47; colOtherHealthIssuesDescr = 48; colSmoker = 49; colCigarettesPerDay = 50; colYearsSmoking = 51;
+% colYearsExSmoker = 52; colDrinksAlcohol = 53; colAlcoholUnitsPerWeek = 54;
 
 % FAS QUEATIONNAIRE
 colFAS = 75;
@@ -48,7 +48,7 @@ colFAS = 75;
 subjectsToExclude = {'CP0011', 'CP0015'}; % 11 (foreign language) and 15 (elder and probaly with some form of dementia).
 %% VOLUNTEERS TABLE
 %volunteersTable = readtable(volunteersExcelFilename, 'NumHeaderLines', 1);
-volunteersTable = readtable(volunteersExcelFilename, 'Range', 'A2:AI168');%, 'HeaderLines', 1);
+volunteersTable = readtable(volunteersExcelFilename, 'Range', 'A2:AI220');%, 'HeaderLines', 1);
 % Remove data to exclude:
 indicesToExclude = [];
 for i = 1 : numel(subjectsToExclude)
@@ -135,6 +135,12 @@ admittedHospForCovid = summaryTable.Var16;
 dateAdmitHospForCovid = summaryTable.Var17;
 dateDischargeHospForCovid = summaryTable.Var18;
 readmittedHospAfterCovid = summaryTable.Var19;
+icuAdmittedHospForCovid = summaryTable.Var21;
+%daysSinceFirstEnfection = summaryTable.Var137; % Not reliables:
+daysSinceFirstEnfection = days(summaryTable.Var3-summaryTable.Var13);
+daysSinceLastEnfection = days(summaryTable.Var3-summaryTable.Var15);
+numVaccinesWhenInfection = summaryTable.Var14;
+unvaccinatedWhenInfection = summaryTable.Var14 == 0;
 
 % Symptoms:
 symptom = table2array(summaryTable(:,colsLongCovidSymptoms));
@@ -145,7 +151,7 @@ labelsSymptoms = {'Yes, and they persist', 'Yes, but no anymore', 'No'};
 %% LOAD MRI REPORTS AND COGNTIVE DATA EXCEL
 %cognitiveTestsTable = readtable(summaryExcelFilename,'Sheet','EvaluacionCognitiva', 'NumHeaderLines', 2);
 %mriReportsTable = readtable(summaryExcelFilename,'Sheet','InformeResonancia', 'NumHeaderLines', 0);
-cognitiveTestsTable = readtable(summaryExcelFilename,'Sheet','EvaluacionCognitiva', 'Range', 'A3:AG141', 'ReadVariableNames', false, 'ReadRowNames', false);
+cognitiveTestsTable = readtable(summaryExcelFilename,'Sheet','EvaluacionCognitiva', 'Range', 'A3:AM188', 'ReadVariableNames', false, 'ReadRowNames', false);
 mriReportsTable = readtable(summaryExcelFilename,'Sheet','InformeResonancia');
 % Remove data to exclude:
 indicesToExclude = [];

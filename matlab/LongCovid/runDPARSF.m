@@ -2,7 +2,7 @@ clear all
 close all
 
 dataPartitionPath = '/data/'; %'D:/'
-adniPartitionPath = '/data_imaging/'; %'F:/'
+imagingPartitionPath = '/data_imaging/'; %'F:/'
 currentPath = pwd;
 % Load data:
 loadData = 1;
@@ -18,12 +18,12 @@ load([ProgramPath,filesep,'Jobmats',filesep,'Template_CalculateInMNISpace_Tradit
 
 
 %% DATA PATHs
-dataPath = '/home/martin/data_imaging/CovidProject/Estudio/PreprocessedMRI/';
-niftiPath = '/home/martin/data_imaging/CovidProject/Estudio/PreprocessedMRI/Nifti/';
-dparsfDataPath = '/home/martin/data_imaging/CovidProject/Estudio/PreprocessedMRI/DPARSF/';
+dataPath = [imagingPartitionPath '/CovidProject/Estudio2/PreprocessedMRI/'];
+niftiPath = [dataPath '/Nifti/'];
+dparsfDataPath = [imagingPartitionPath '/CovidProject/Estudio2/PreprocessedMRI/DPARSF/'];
 indexScanner = 1; % Siemens=1, GE=2, Philips=3.
 % Filename with the available MRI data:
-filenameMriInfo = [dataPath 'mriInfoAndProcessing_2024_06_03.mat'];
+filenameMriInfo = [dataPath 'mriInfoAndProcessing_2024_09_16.mat'];
 %% DATA INFO
 mriInfo = load(filenameMriInfo);
 %% CONFIG

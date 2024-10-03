@@ -24,7 +24,7 @@ preprocessedDataPath = [dataPartitionPath '/UNSAM/CovidProject/Estudio/Preproces
 preprocessedDataPath = [dataImagingPartitionPath '/CovidProject/Estudio/PreprocessedMRI/'];
 % Second study:
 dicomDataPath = [dataPartitionPath '/UNSAM/CovidProject2/Imaging/MRI/'];
-preprocessedDataPath = [dataImagingPartitionPath '/UNSAM/CovidProject/Estudio2/PreprocessedMRI/'];
+preprocessedDataPath = [dataImagingPartitionPath '/CovidProject/Estudio2/PreprocessedMRI/'];
 niftiDataPath = [preprocessedDataPath '/Nifti/'];
 dparsfPath = [preprocessedDataPath '/DPARSF/'];
 if ~isdir(niftiDataPath)
@@ -133,6 +133,17 @@ for i = 1 : numel(casesToProcess)
     info = niftiinfo([niftiT1Filenames{i}]);
     t1_imageSize_voxels(i,:) = info.ImageSize;
     t1_voxelSize_mm(i,:) = info.PixelDimensions;
+    % Get age and sex
+    if isfield(dcmTagsT1{i}, 'PatientAge')
+        age_years(i) = str2num(dcmTagsT1{i}.PatientAge(1:end-1));
+    else
+        age_years(i) = 0;
+    end
+    if isfield(dcmTagsT1{i}, 'PatientSex')
+        sex(i) = dcmTagsT1{i}.PatientSex;
+    else
+        sex(i) = 'N';
+    end
     %% fMRI
     indexfMri = find(strncmp(sequencesPerSubject{i}, 'funcional', numel('funcional'))>0);
     if numel(indexfMri) > 1 % There are two fmris, use the second one.
@@ -149,39 +160,32 @@ for i = 1 : numel(casesToProcess)
         % Use the last one
         indexfMri = indexfMriNoMoco(end);
     end
-    namefMri = sequencesPerSubject{i}{indexfMri};
-    dcmTagsRsFmri{i} = getfield(dcmTags{i}.h,namefMri);
-    niftifMriFilenames{i} = [niftiPathThisSubject namefMri '.nii.gz'];
-    %fMRI_voxelSize_mm(i,:) = [dcmTagsRsFmri{i}.PixelSpacing' dcmTagsRsFmri{i}.SliceThickness];
-    %fMRI_matrixSize_voxels(i,:) = [dcmTagsRsFmri{i}.AcquisitionMatrix(1) dcmTagsRsFmri{i}.AcquisitionMatrix(4) dcmTagsRsFmri{i}.LocationsInAcquisition]; 
-    fMRI_tR(i) = dcmTagsRsFmri{i}.RepetitionTime;
-    fMRI_tE(i) = dcmTagsRsFmri{i}.EchoTime;
-    if isfield(dcmTagsRsFmri{i}, 'MosaicRefAcqTimes')
-        fMRI_sliceAcqTimes{i} = dcmTagsRsFmri{i}.MosaicRefAcqTimes;
-        fMRI_fslSliceOrcer{i} = dcmTagsRsFmri{i}.SliceTiming;
-        [times, fMRI_sliceOrder{i}] = sort(dcmTagsRsFmri{i}.MosaicRefAcqTimes);
-    else
-        fMRI_sliceAcqTimes{i} = (0.5 - dcmTagsRsFmri{i}.SliceTiming) * dcmTagsRsFmri{i}.RepetitionTime;
-        fMRI_fslSliceOrcer{i} = dcmTagsRsFmri{i}.SliceTiming;
-        [times, fMRI_sliceOrder{i}] = sort(fMRI_sliceAcqTimes{i});
+    if ~isempty(indexfMri)
+        namefMri = sequencesPerSubject{i}{indexfMri};
+        dcmTagsRsFmri{i} = getfield(dcmTags{i}.h,namefMri);
+        niftifMriFilenames{i} = [niftiPathThisSubject namefMri '.nii.gz'];
+        %fMRI_voxelSize_mm(i,:) = [dcmTagsRsFmri{i}.PixelSpacing' dcmTagsRsFmri{i}.SliceThickness];
+        %fMRI_matrixSize_voxels(i,:) = [dcmTagsRsFmri{i}.AcquisitionMatrix(1) dcmTagsRsFmri{i}.AcquisitionMatrix(4) dcmTagsRsFmri{i}.LocationsInAcquisition]; 
+        fMRI_tR(i) = dcmTagsRsFmri{i}.RepetitionTime;
+        fMRI_tE(i) = dcmTagsRsFmri{i}.EchoTime;
+        if isfield(dcmTagsRsFmri{i}, 'MosaicRefAcqTimes')
+            fMRI_sliceAcqTimes{i} = dcmTagsRsFmri{i}.MosaicRefAcqTimes;
+            fMRI_fslSliceOrcer{i} = dcmTagsRsFmri{i}.SliceTiming;
+            [times, fMRI_sliceOrder{i}] = sort(dcmTagsRsFmri{i}.MosaicRefAcqTimes);
+        else
+            fMRI_sliceAcqTimes{i} = (0.5 - dcmTagsRsFmri{i}.SliceTiming) * dcmTagsRsFmri{i}.RepetitionTime;
+            fMRI_fslSliceOrcer{i} = dcmTagsRsFmri{i}.SliceTiming;
+            [times, fMRI_sliceOrder{i}] = sort(fMRI_sliceAcqTimes{i});
+        end
+        image = niftiread([niftifMriFilenames{i}]);
+        info = niftiinfo([niftifMriFilenames{i}]);
+        fMRI_imageSize_voxels(i,:) = info.ImageSize;
+        fMRI_voxelSize_mm(i,:) = info.PixelDimensions;
+        fMRI_inPlanePhaseEncodingDirection(i,:) = dcmTagsRsFmri{i}.InPlanePhaseEncodingDirection;
+        fMRI_unwarpDirection(i,:) = dcmTagsRsFmri{i}.UnwarpDirection;
+        fMRI_effectiveEPIEchoSpacing(i) = dcmTagsRsFmri{i}.EffectiveEPIEchoSpacing;
     end
-    image = niftiread([niftifMriFilenames{i}]);
-    info = niftiinfo([niftifMriFilenames{i}]);
-    fMRI_imageSize_voxels(i,:) = info.ImageSize;
-    fMRI_voxelSize_mm(i,:) = info.PixelDimensions;
-    fMRI_inPlanePhaseEncodingDirection(i,:) = dcmTagsRsFmri{i}.InPlanePhaseEncodingDirection;
-    fMRI_unwarpDirection(i,:) = dcmTagsRsFmri{i}.UnwarpDirection;
-    fMRI_effectiveEPIEchoSpacing(i) = dcmTagsRsFmri{i}.EffectiveEPIEchoSpacing;
-    if isfield(dcmTagsRsFmri{i}, 'PatientAge')
-        age_years(i) = str2num(dcmTagsRsFmri{i}.PatientAge(1:end-1));
-    else
-        age_years(i) = 0;
-    end
-    if isfield(dcmTagsRsFmri{i}, 'PatientSex')
-        sex(i) = dcmTagsRsFmri{i}.PatientSex;
-    else
-        sex(i) = 'N';
-    end
+
     %% FIELD MAPPING
     indexField = contains(sequencesPerSubject{i}, 'mapping');    
     namesFieldMapping = sequencesPerSubject{i}(indexField);
@@ -253,10 +257,12 @@ for i = 1 : numel(casesToProcess)
     mkdir(t1DparsfPathThisSubject);
     copyfile([niftiPathThisSubject nameT1 niftiExtension], t1DparsfPathThisSubject);
     mkdir(fmriDparsfPathThisSubject);
-    copyfile([niftiPathThisSubject namefMri niftiExtension], fmriDparsfPathThisSubject);
-    if exist([niftiPathThisSubject nameFieldmappingMag1 niftiExtension])
-        mkdir(fieldmapMag1DparsfPathThisSubject);
-        copyfile([niftiPathThisSubject nameFieldmappingMag1 niftiExtension], fieldmapMag1DparsfPathThisSubject);
+    if exist([niftiPathThisSubject namefMri niftiExtension])
+        copyfile([niftiPathThisSubject namefMri niftiExtension], fmriDparsfPathThisSubject);
+        if exist([niftiPathThisSubject nameFieldmappingMag1 niftiExtension])
+            mkdir(fieldmapMag1DparsfPathThisSubject);
+            copyfile([niftiPathThisSubject nameFieldmappingMag1 niftiExtension], fieldmapMag1DparsfPathThisSubject);
+        end
     end
     if exist([niftiPathThisSubject nameFieldmappingMag2 niftiExtension])
         mkdir(fieldmapMag2DparsfPathThisSubject);

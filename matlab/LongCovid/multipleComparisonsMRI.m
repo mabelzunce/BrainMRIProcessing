@@ -1,16 +1,16 @@
 clear all
-pathData = '/home/martin/data/UNSAM/CovidProject/Estudio/DataAnalysis/BrainMorphometry/';
-studyDataPath = '/home/martin/data/UNSAM/CovidProject/Estudio/';
+pathData = '/home/martin/data/UNSAM/CovidProject2/DataAnalysis/BrainMorphometry/';
+studyDataPath = '/home/martin/data/UNSAM/CovidProject2/';
 resultsPath = [studyDataPath '/DataAnalysis/'];
 
 subjectsToExclude = {'CP0011', 'CP0015','CP0035', 'CP0144', 'CP0106'};
 
-summaryExcelFilename = fullfile(studyDataPath, 'RespuestasCuestionarioEvaluacionCognitivaResonancia.xlsx');
+summaryExcelFilename = fullfile(studyDataPath, 'Respuestas.xlsx');
 
-parcelationVolFilename = 'parcellation_volumes_clean.csv';
-parcelationThicknessFilename = 'parcellation_thickness_clean.csv';
-segmentationFilename = 'segmentation_clean.csv';
-brainVolumes = 'brain_volumes.csv';
+parcelationVolFilename = 'parcellation_volumes_clean_all.csv';
+parcelationThicknessFilename = 'parcellation_thickness_clean_all.csv';
+segmentationFilename = 'segmentation_all.csv';
+brainVolumes = 'brain_volumes_all.csv';
 %leftParcDktAncova = readtable([pathData, leftParcDktAncovaFilename]);
 %% SUMMARY
 summaryTable = readtable(summaryExcelFilename);
@@ -443,6 +443,19 @@ for j = 1 : numPermutations
     % end
     diffMeanGroupsPerm(j,:) = mean(matSegmentationsPerSubject(indicesCOVIDShuffled,:)) - mean(matSegmentationsPerSubject(indicesControlShuffled,:));
     diffMeanGroupsPermReg(j,:) = mean(metric_reg_age(indicesCOVIDShuffled,:)) - mean(metric_reg_age(indicesControlShuffled,:));
+
+end
+% Visually checking the results
+for i = 1 : size(diffMeanGroups,2)
+    figure;
+    set(gcf, 'Position', [100 100 1600 1200])
+    subplot(1,2,1);
+    hist(diffMeanGroupsPermReg(:,i));
+    hold on; plot(diffMeanGroups(i),0,'x');
+    subplot(1,2,2);
+    hist(diffMeanGroupsPermReg(:,i));
+    hold on; plot(diffMeanGroupsReg(i),0,'x');
+    pause
 end
 
 % compute p values for the measured difference:

@@ -1,13 +1,27 @@
 clear all
 close all
 
+%% ADD PATHS
+dataPartitionPath = '/data/'; %'D:/'
+dataImagingPartitionPath = '/data_imaging/'; %'F:/'
+
+addpath([dataPartitionPath 'UNSAM/Brain/dicm2nii/'])
+addpath(genpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/']))
+addpath([dataPartitionPath 'UNSAM/Brain/spm12/spm12/'])
+addpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/DPARSF/'])
+addpath('../FSL/')
+freesurferSubjectsPath =  [dataPartitionPath '/freesurfer_subjects/'];
+
 %% NAME SEQUENCES AND VARIABLES
 niftiExtension = '.nii.gz';
 dcmHeadersFilename = 'dcmHeaders.mat';
 
-imagesDir = '/mnt/d87cc26d-5470-443c-81c1-e09b68ee4730/Sol/COVID/ASL_BIDS/Organized_DICOM/';
-niftiDir = '/mnt/d87cc26d-5470-443c-81c1-e09b68ee4730/Sol/COVID/ASL_BIDS/Nifti/BIDS/rawdata/';
+imagesDir = [dataPartitionPath '/UNSAM/CovidProject/Estudio/MRI/'];
+niftiDir = [dataImagingPartitionPath '/CovidProject/Estudio/BidsDataBase/'];
 
+if ~isdir(niftiDir)
+    mkdir(niftiDir)
+end
 %% CREATE DATASET DESCRIPTION JSON 
 datasetDescriptionJsonPath = [niftiDir 'dataset_description.json'];
 
@@ -27,7 +41,7 @@ fclose(fileID);
 
 %% CASES TO PROCESS 
 %subject = 'CP0061';
-casesToProcess = []; 
+casesToProcess = {'CP0061'}; 
 if isempty(casesToProcess)
     dirPaths = dir(imagesDir);
     casesToProcess = {dirPaths(3:end).name};
@@ -54,19 +68,10 @@ for i = 1 : numel(casesToProcess)
     subjectBIDS = ['sub-' subject]; %Subject Name using BIDS format 
     subjectBIDSDir = [niftiDir subjectBIDS '/']; %Path to subject in BIDS dir 
     subjectDirDICOM = [imagesDir subject '/DICOM/'];
+
     %subjectDirNifti = [niftiDir subject '/Nifti/'];
     
     converterOut = dicm2nii(subjectDirDICOM, niftiDir, 'bids'); 
-
-    % Rename T2 with FLAIR
-    subjectT2NameJson = [subjectBIDSDir 'anat/' subjectBIDS '_T2w.json'];
-    subjectFLAIRNameJson = [subjectBIDSDir 'anat/' subjectBIDS '_FLAIR.json'];
-
-    subjectT2NameImage = [subjectBIDSDir 'anat/' subjectBIDS '_T2w.nii.gz'];
-    subjectFLAIRNameImage= [subjectBIDSDir 'anat/' subjectBIDS '_FLAIR.nii.gz'];
-    
-    movefile(subjectT2NameJson, subjectFLAIRNameJson);
-    movefile(subjectT2NameImage, subjectFLAIRNameImage);
 
     % Modify Json
     subjectDICOMHeaders =  [subjectBIDSDir dcmHeadersFilename];
