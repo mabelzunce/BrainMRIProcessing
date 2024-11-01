@@ -56,8 +56,8 @@ def main():
     if t2 == None:
         logger.error('There is no T2. Subject ' + subject + ' cannot be processed.')
     else:
-        LT.runCommand(logger, f'chmod +x ./white_matter')  # Give permission to Bash Script
-        LT.runCommand(logger, f'./white_matter {t2} {outputSubjectDir}')
+        LT.runCommand(logger, f'chmod +x ./white_matter_bianca')  # Give permission to Bash Script
+        LT.runCommand(logger, f'./white_matter_bianca {t2} {outputSubjectDir}')
 
     LT.finishLogging(logger)
 
