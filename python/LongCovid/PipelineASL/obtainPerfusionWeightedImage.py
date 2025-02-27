@@ -53,6 +53,10 @@ for i in range(size[3]):
 resultado_final_1 = sitk.Add(sum_pares_1, resta_impares_1)
 resultado_final_2 = sitk.Add(sum_impares_2, resta_pares_2)
 
+# Dividir por 0.9 las imágenes de resultado final
+resultado_final_1 = sitk.Multiply(resultado_final_1, 0.9)
+resultado_final_2 = sitk.Multiply(resultado_final_2, 0.9)
+
 # Calcular el promedio
 promedio_final_1 = sitk.Divide(resultado_final_1, num_pares + num_impares)
 promedio_final_2 = sitk.Divide(resultado_final_2, num_pares + num_impares)
