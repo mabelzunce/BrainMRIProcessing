@@ -7,7 +7,7 @@ function fig = check_fMRI_bold_signals(roiSignals)
 
     fig = figure('units','normalized','outerposition',[0 0 1 1]) ;
     
-    
+    roiSignals(isnan(roiSignals)) = 0;
     % Cross correlation:
     crossCorrSignals = corr(roiSignals) ; % cross corr
     
@@ -39,21 +39,19 @@ function fig = check_fMRI_bold_signals(roiSignals)
     lags= 75 ;
     for j = 1 : size(roiSignals,2)
         y = autocorr(roiSignals(:,j),'NumLags',lags ) ;
-        
+
         plot (y) ;
         title ('acf') ;
         hold on ;
     end
     hold off ;
-    
+
     
     % Power spectrum of all signals
     roiSignalsZ = normalize(roiSignals);
+    roiSignalsZ(isnan(roiSignalsZ)) = 0;
     % Concatenate:
     roiSingalsZ_concat = reshape(roiSignalsZ, [], 1);
-    % Show power spectrum:
-    subplot(2,3,5) ;
-    pspectrum(roiSingalsZ_concat)
 
     % Concatenate with interpolation between ROIs.
     % We add a row to the matrix with (signal(roi,end)+signal(roi+1,1))/2

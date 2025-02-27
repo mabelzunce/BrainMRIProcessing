@@ -123,6 +123,28 @@ for i = 1 : numel(listDir)-2
     imageSize_voxels(i,:) = size(image);
     timePoints(i) = imageSize_voxels(i,4);
     numSlices(i) = imageSize_voxels(i,3);
+    fMRI_tR(k) = dcmTagsRsFmri{k}.RepetitionTime;
+    fMRI_tE(k) = dcmTagsRsFmri{k}.EchoTime;
+    if isfield(dcmTagsRsFmri{k}, 'MosaicRefAcqTimes')
+        fMRI_sliceAcqTimes{k} = dcmTagsRsFmri{k}.MosaicRefAcqTimes;
+        fMRI_fslSliceOrcer{k} = dcmTagsRsFmri{k}.SliceTiming;
+        [times, fMRI_sliceOrder{k}] = sort(dcmTagsRsFmri{k}.MosaicRefAcqTimes);
+    elseif isfield(dcmTagsRsFmri{k}, 'SliceTiming')
+        fMRI_sliceAcqTimes{k} = (0.5 - dcmTagsRsFmri{k}.SliceTiming) * dcmTagsRsFmri{k}.RepetitionTime;
+        fMRI_fslSliceOrcer{k} = dcmTagsRsFmri{k}.SliceTiming;
+        [times, fMRI_sliceOrder{k}] = sort(fMRI_sliceAcqTimes{k});
+    end
+    %image = niftiread([niftifMriFilenames{k}]);
+    info = niftiinfo(niftiFilename);
+    fMRI_imageSize_voxels(k,:) = info.ImageSize;
+    fMRI_voxelSize_mm(k,:) = info.PixelDimensions;
+    fMRI_inPlanePhaseEncodingDirection{k} = dcmTagsRsFmri{k}.InPlanePhaseEncodingDirection;
+    fMRI_unwarpDirection(k,:) = dcmTagsRsFmri{k}.UnwarpDirection;
+    if isfield(dcmTagsRsFmri{k}, 'EffectiveEPIEchoSpacing')
+        fMRI_effectiveEPIEchoSpacing(k) = dcmTagsRsFmri{k}.EffectiveEPIEchoSpacing;
+    end
+    manufacturer{k} = dcmTagsRsFmri{k}.Manufacturer;
+    model{k} = dcmTagsRsFmri{k}.ManufacturerModelName;
 end
 
 % Group all the subjects with the same numSlices and timePoints:

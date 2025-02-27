@@ -177,13 +177,26 @@ for i = 1 : numel(casesToProcess)
             fMRI_fslSliceOrcer{i} = dcmTagsRsFmri{i}.SliceTiming;
             [times, fMRI_sliceOrder{i}] = sort(fMRI_sliceAcqTimes{i});
         end
-        image = niftiread([niftifMriFilenames{i}]);
+        %image = niftiread([niftifMriFilenames{i}]);
         info = niftiinfo([niftifMriFilenames{i}]);
         fMRI_imageSize_voxels(i,:) = info.ImageSize;
         fMRI_voxelSize_mm(i,:) = info.PixelDimensions;
         fMRI_inPlanePhaseEncodingDirection(i,:) = dcmTagsRsFmri{i}.InPlanePhaseEncodingDirection;
         fMRI_unwarpDirection(i,:) = dcmTagsRsFmri{i}.UnwarpDirection;
         fMRI_effectiveEPIEchoSpacing(i) = dcmTagsRsFmri{i}.EffectiveEPIEchoSpacing;
+    else
+        fMRI_tR(i) = NaN;
+        fMRI_tE(i) = NaN;
+        fMRI_imageSize_voxels(i,:) = NaN;
+        fMRI_voxelSize_mm(i,:) = NaN;
+        fMRI_inPlanePhaseEncodingDirection(i,:) = NaN;
+        fMRI_unwarpDirection(i,:) = NaN;
+        fMRI_effectiveEPIEchoSpacing(i) = NaN;
+        fMRI_sliceOrder{i} = [];
+        fMRI_sliceAcqTimes{i} = [];
+        fMRI_fslSliceOrcer{i} = [];
+        dcmTagsRsFmri{i} = [];
+        niftifMriFilenames{i} = [];
     end
 
     %% FIELD MAPPING
@@ -191,6 +204,13 @@ for i = 1 : numel(casesToProcess)
     namesFieldMapping = sequencesPerSubject{i}(indexField);
     if numel(namesFieldMapping) < 3
         warning('Field mapping images of %s are incomplete', casesToProcess{i});
+        fieldMapping_unwarpDirection{i}{1} = [];
+        fieldMapping_tR(i,1) = NaN;
+        fieldMapping_tE(i,1) = NaN;
+        fieldMapping_deltaTE(i,1) = NaN;
+        fieldMapping_effectiveEPIEchoSpacing(i,1) = NaN;
+        fieldMapping_imageSize_voxels(i,1,:) = NaN;
+        fieldMapping_voxelSize_mm(i,1,:) = NaN;
     end
     for j = 1 : numel(namesFieldMapping)
         dcmTagsFieldMapping{i}{j} = getfield(dcmTags{i}.h,namesFieldMapping{j});
@@ -213,7 +233,7 @@ for i = 1 : numel(casesToProcess)
             fieldMapping_deltaTE(i,j) = dcmTagsFieldMapping{i}{j}.deltaTE;
             fieldMapping_effectiveEPIEchoSpacing(i,j) = dcmTagsFieldMapping{i}{j}.EffectiveEPIEchoSpacing;
             fieldMapping_imageSize_voxels(i,j,:) = info.ImageSize;
-            fieldMapping_voxelSize_mm(i,j,:) = info.PixelDimensions;
+            fieldMapping_voxelSize_mm(i,j,:) = info.PixelDimensions;            
         end
     end
     %% DTI
@@ -315,25 +335,27 @@ else
 end
 %% PREPROCESSING fMRI WITH FSL
 for i = 1 : numel(casesToProcess)
-    fslPreprocessedDataPathThisSubject = [fslPreprocessedDataPath '/' casesToProcess{i} '/fMRI/'];
-    if ~isdir(fslPreprocessedDataPathThisSubject)
-        mkdir(fslPreprocessedDataPathThisSubject);
-    end
-    % Check if fieldmapping available and correct:
-    if (fieldMapping_indexMag1(i) ~= 0) && (fieldMapping_indexPhase(i)~=0)
-        filenameMag1 = niftiFieldMappingFilenames{i}{fieldMapping_indexMag1(i)};
-        filenamePhase = niftiFieldMappingFilenames{i}{fieldMapping_indexPhase(i)};
-        outputPathFieldmap = fslPreprocessedDataPathThisSubject;
-        dTE = fieldMapping_deltaTE(i,fieldMapping_indexMag1(i));
-        outputFilename = [outputPathFieldmap 'fmap_rads.nii.gz']; % default output
-        if ~exist(outputFilename)
-            output = FslPrepareFieldmap(filenamePhase, filenameMag1, outputPathFieldmap, dTE);
+    if ~isempty(niftifMriFilenames{77})
+        fslPreprocessedDataPathThisSubject = [fslPreprocessedDataPath '/' casesToProcess{i} '/fMRI/'];
+        if ~isdir(fslPreprocessedDataPathThisSubject)
+            mkdir(fslPreprocessedDataPathThisSubject);
         end
+        % Check if fieldmapping available and correct:
+        if (fieldMapping_indexMag1(i) ~= 0) && (fieldMapping_indexPhase(i)~=0)
+            filenameMag1 = niftiFieldMappingFilenames{i}{fieldMapping_indexMag1(i)};
+            filenamePhase = niftiFieldMappingFilenames{i}{fieldMapping_indexPhase(i)};
+            outputPathFieldmap = fslPreprocessedDataPathThisSubject;
+            dTE = fieldMapping_deltaTE(i,fieldMapping_indexMag1(i));
+            outputFilename = [outputPathFieldmap 'fmap_rads.nii.gz']; % default output
+            if ~exist(outputFilename)
+                output = FslPrepareFieldmap(filenamePhase, filenameMag1, outputPathFieldmap, dTE);
+            end
+        end
+        % Then do the preprocessing with Feat:
+        % fMRI_sliceAcqTimes{i} = dcmTagsRsFmri{i}.MosaicRefAcqTimes;
+        % fMRI_fslSliceOrcer{i} = dcmTagsRsFmri{i}.SliceTiming;
+        % [times, fMRI_sliceOrder{i}] = sort(dcmTagsRsFmri{i}.MosaicRefAcqTimes);
     end
-    % Then do the preprocessing with Feat:
-    % fMRI_sliceAcqTimes{i} = dcmTagsRsFmri{i}.MosaicRefAcqTimes;
-    % fMRI_fslSliceOrcer{i} = dcmTagsRsFmri{i}.SliceTiming;
-    % [times, fMRI_sliceOrder{i}] = sort(dcmTagsRsFmri{i}.MosaicRefAcqTimes);
 end
 %% STRUCTURAL FOR EACH SUBJECT
 % Calls robustfov and the bet for the T1_mprage

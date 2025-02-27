@@ -11,10 +11,12 @@ addpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/DPARSF/'])
 %% DATA PATHS
 dataPath = [dataPartitionPath '/UNSAM/CEMSC3/ProcesamientoADNI/DataBase/DataBaseDrive-20231031T195909Z-001/DataBase/ADNI_fMRI_screening/AAL/'];
 dataPath = [imagingPartitionPath '/CovidProject/Estudio/PreprocessedMRI/DPARSF/'];
+dataPath = [imagingPartitionPath '/ADNIdata/Trini/'];
 roiSignalsPath = [dataPath '/Results/ROISignals_FunImgARWSDCF/'];
+roiSignalsPath = [dataPath '/ResultsAAL/ROISignals_NiftiPreprocessedAllBatchesNorm/'];
 %roiSignalsPath = '/home/martin/data/UNSAM/CEMSC3/ProcesamientoADNI/DataBase/ADNI3_Advanced_MB_fMRI/AAL/';
-csvFilename = [dataPath 'DataBaseSubjects.csv'];
-outputPath = [dataPartitionPath '/CovidProject/Estudio/fMRIAnalyisis/RMT/'];
+csvFilename = [dataPath 'SubjectsDataAndTests.csv'];
+outputPath = [dataPartitionPath '/UNSAM/Brain/Alzheimer/RMT/'];
 if ~isdir(outputPath)
     mkdir(outputPath)
 end
@@ -22,7 +24,8 @@ end
 subjectsInfo = readtable(csvFilename);
 
 %% READ ALL THE BOLD SIGNALS, THE DEMOGRAPHICS DATA AND COMPUTE THE CORRELATION MATRICES
-roiSignalsDir = dir(roiSignalsPath);
+subjectsToExclude = {'114_S_6039', '035_S_6953', '128_S_2002', '031_S_4021', '130_S_5231'};
+roiSignalsDir = dir(fullfile(roiSignalsPath, '*.mat'));
 % Get filenames, removing dirs
 roiSignalsFilenames = {roiSignalsDir(~[roiSignalsDir.isdir]).name};
 % group them by clinical group:
@@ -32,21 +35,27 @@ for i = 1 : numel(roiSignalsFilenames)
     [filepath,name,ext] = fileparts(roiSignalsFilenames{i});
     splitName = split(name,'ROISignals_');
     name = splitName{2};
-    
     % Leave only AD and CN
     indexInTable = find(strcmp(name, subjectsInfo.SubjectID));
-    if strcmp(subjectsInfo.ResearchGroup(indexInTable), 'AD') || strcmp(subjectsInfo.ResearchGroup(indexInTable), 'CN')
-        subjectNames{indexSubject} = name;
-        roiSignals{indexSubject} = roiSignalsTemp.ROISignals;    
-        lengthSignals(indexSubject) = size(roiSignals{indexSubject}, 1);
-        % Normalize the signals:
-        roiSignals{indexSubject} = zscore(roiSignals{indexSubject}); % Works in columns.
-        crossCorr(:,:,indexSubject) = corr(roiSignals{indexSubject});
-        indexSubject = indexSubject+1;
-        %fig = check_fMRI_bold_signals(roiSignals{i});   
+    if sum(strcmp(name, subjectsToExclude)) == 0
+        % if nan in the signals, remove them:
+        if sum(isnan(roiSignalsTemp.signals)) > 0
+            warning(sprintf('Subject %s removed because of nan ROI signals', name));
+        elseif strcmp(subjectsInfo.ResearchGroup(indexInTable), 'AD') || strcmp(subjectsInfo.ResearchGroup(indexInTable), 'CN')
+            subjectNames{indexSubject} = name;
+            roiSignalsOriginal{indexSubject} = roiSignalsTemp.signals;    
+            lengthSignals(indexSubject) = size(roiSignalsOriginal{indexSubject}, 1);
+            % Normalize the signals:
+            roiSignals{indexSubject} = zscore(roiSignalsOriginal{indexSubject}); % Works in columns.
+            roiSignals{indexSubject}(isnan(roiSignals{indexSubject})) = 0; % Regions with zero signal
+            crossCorr(:,:,indexSubject) = corr(roiSignals{indexSubject});
+            indexSubject = indexSubject+1;
+            %fig = check_fMRI_bold_signals(roiSignals{i});   
+        end  
     end
-    
 end
+% Correlations between zero signals are NaN, force them to 0.
+crossCorr(isnan(crossCorr)) = 0; % Regions with zero signal
 
 % Get demographics of valid data:
 for i = 1 : numel(subjectNames)
@@ -226,11 +235,13 @@ saveas(gca, [outputPath 'ComponentContributionsAndIPR'], 'png');
 
 %% GET THE "STRENGTH OF SIGNAL" OF EACH BRAIN NETWORK
 % Whitening matrix
-W = diag(lambdaBrainNetworks.^-(1/2))*brainNetworks'; 
-
+W = diag(sign(lambdaBrainNetworks).*(abs(lambdaBrainNetworks).^-(1/2)))*brainNetworks'; 
+%roiSignals{indexSubject}(isnan(roiSignals{indexSubject})) = 0; % Regions with zero signal
 % Apply the prwhitenning matrix:
 for i = 1 : numel(subjectNames)
-    S{i} = W*roiSignals{i}'; % We use a cell array just in case the signals don't have the same length for different subjects.
+    roiSignalsOriginal{i}(isnan(roiSignalsOriginal{i})) = 0;
+    S{i} = W*roiSignalsOriginal{i}'; % We use a cell array just in case the signals don't have the same length for different subjects.
+    %S{i} = W*roiSignals{i}';
     % Get the rms (normalized by number of time points):
     for j = 1 : numBrainNetworks
         rmsBrainNetowrksSubjects(i,j) = rms(S{i}(j,:))./size(S{1},2);
@@ -240,8 +251,27 @@ end
 % Compare the rms between the two groups for each brain network using a
 % kruskal wallis statistical test
 for i = 1 : numBrainNetworks
-    p_kw(i) = kruskalwallis(rmsBrainNetowrksSubjects(:,i),group);
-    p_anova(i) = anova1(rmsBrainNetowrksSubjects(:,i),group);
+    p_kw(i) = kruskalwallis(rmsBrainNetowrksSubjects(:,i),group, 'off');
+    p_anova(i) = anova1(rmsBrainNetowrksSubjects(:,i),group,'off');
+end
+%% ANCOVA WITH COVARIATES
+% 
+% tbl = table(group, age, sex, scanner, edu_years, ventricles, site, ventricles);
+% for i = 1 : numBrainNetworks
+%     anovaTable{i} = anova(tbl, rmsBrainNetowrksSubjects(:,i), categoricalFactors=["group"]);
+%     p(i) = anovaTable{i}.stats.pValue(1);
+%     p_age(i) = anovaTable{i}.stats.pValue(2);
+%     p_eTIV(i) = anovaTable{i}.stats.pValue(3);
+% end
+
+tbl = table(group, age, sex, scanner,mmse);%, mmse);
+for i = 1 : numBrainNetworks
+    anovaTableAgeSexScanner{i} = anova(tbl, rmsBrainNetowrksSubjects(:,i), categoricalFactors=["group", "sex", "scanner"]);
+    p(i) = anovaTableAgeSexScanner{i}.stats.pValue(1);
+    p_age(i) = anovaTableAgeSexScanner{i}.stats.pValue(2);
+    p_sex(i) = anovaTableAgeSexScanner{i}.stats.pValue(3);
+    p_scanner(i) = anovaTableAgeSexScanner{i}.stats.pValue(4);
+    p_mmse(i) = anovaTableAgeSexScanner{i}.stats.pValue(5);
 end
 %% VIOLIN PLOTS
 % Get the code for violin plots from: https://github.com/bastibe/Violinplot-Matlab.git

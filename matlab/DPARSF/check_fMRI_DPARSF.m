@@ -42,7 +42,7 @@ function fig = check_fMRI_DPARSF (working_dir , subID , signals_dir , output, sa
     edad = T.Age(indice) ; edad = string(edad) ;
     fecha = T.StudyDate(indice) ; 
     grupo = T.ResearchGroup(indice) ; grupo = char(grupo) ;
-    TP = T.TimePoints(indice)-5 ; TP = string(TP) ;
+    %TP = T.TimePoints(indice)-5 ; TP = string(TP) ;
     
     
     % --> image Quality
@@ -136,7 +136,7 @@ function fig = check_fMRI_DPARSF (working_dir , subID , signals_dir , output, sa
     ROI = strcat( 'ROISignals_' , subID , '.mat' ) ;
     p_ROI = strcat(working_dir, signals_dir , ROI) ;
     S = load (p_ROI) ;
-    S = S.ROISignals ; % señales BOLD   
+    S = S.signals ; % señales BOLD   
     corr_S = corr(S) ; % cross corr
     hold off ;
     
@@ -170,15 +170,15 @@ function fig = check_fMRI_DPARSF (working_dir , subID , signals_dir , output, sa
     hold off ;
     
     % [ AUTOCORRELACION ] 
-    lags= 75 ;
-    for j = 1:116
-        y = autocorr ( S(:,j),'NumLags',lags ) ;
-        sp5 = subplot(2,5,5) ;
-        plot (y) ;
-        title ('acf') ;
-        hold on ;
-    end
-    hold off ;
+    % lags= 5 ;
+    % for j = 1:116
+    %     y = autocorr ( S(:,j),'NumLags',lags ) ;
+    %     sp5 = subplot(2,5,5) ;
+    %     plot (y) ;
+    %     title ('acf') ;
+    %     hold on ;
+    % end
+    % hold off ;
     
     
     % [ MEDIA VS VARIANZA ] 

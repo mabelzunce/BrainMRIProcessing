@@ -475,6 +475,20 @@ for i = 1 :numel(nameTests)
         uint8(categorical(testsResults_performance(indicesControlCT,i))), 0.05);
     close all
 end
+%% BOXPLOTS
+figure;
+set(gcf, 'Position', [100 100 1600 600])
+%tiledlayout(1,2);
+%nexttile
+%boxchart(testsResults_perc,'GroupByColor',groupTests(indicesSubjectsWithCT));
+boxchart(groupTests(indicesSubjectsWithCT),testsResults_perc);
+title('Cognitive Tests')
+ylabel('Normalzied Scores [%]');
+xlabel('Group')
+xticks([])
+
+legend('Controls', 'Long COVID')
+saveas(gcf, [outputPath 'CogntiveTests.png'])
 %% CORRELATION SYMPTOMS AND COGNITIVE
 sumNoNormalCovid = sum(~strcmp(testsResults_performance(indicesCovidCT,:), 'normal'),2);
 meanResultsPercCovid = mean(testsResults_perc(indicesCovidCT,:),2,"omitnan");
@@ -510,6 +524,26 @@ indicesControlSaliva = strcmp(groupTests(hasSaliva), 'CONTROL');
 [pKW_gad7, annovaTab_gad7, stats_gad7] = kruskalwallis(gad7_score(hasSaliva), categorical(groupTests(hasSaliva)));
 [h_gad7,p_gad7,test_gad7,df_gad7] = chi2test2(uint8(categorical(gad7_rendimiento(hasSaliva(indicesCovidSaliva)))), ...
     uint8(categorical(gad7_rendimiento(hasSaliva(indicesControlSaliva)))), 0.05);
+
+%% BOXPLOTS
+figure;
+set(gcf, 'Position', [100 100 1600 600])
+tiledlayout(1,2);
+nexttile
+boxchart(phq9_score(hasSaliva),'GroupByColor',groupTests(hasSaliva));
+title('PHQ-9 Scale - Depression')
+ylabel('Score');
+xlabel('Group')
+xticks([])
+nexttile
+boxchart(gad7_score(hasSaliva),'GroupByColor',groupTests(hasSaliva));
+title('GAD-7 Scale - Anxiety');
+ylabel('Score');
+xlabel('Group')
+xticks([])
+
+legend('Controls', 'Long COVID')
+saveas(gcf, [outputPath 'mentalHealthScales.png'])
 %% LOAD BIOMARKERS
 %cognitiveTestsTable = readtable(summaryExcelFilename,'Sheet','EvaluacionCognitiva', 'NumHeaderLines', 2);
 %mriReportsTable = readtable(summaryExcelFilename,'Sheet','InformeResonancia', 'NumHeaderLines', 0);
@@ -657,6 +691,7 @@ fitlm(M6aNg_ml_wmh,wmhBiomarkers.TotalVolumeOfClusters)
 fitlm(anxiety_wmh,wmhBiomarkers.TotalVolumeOfClusters)
 fitlm(depression_wmh,wmhBiomarkers.TotalVolumeOfClusters)
 
+save([outputPath 'ResultsAnalyzeData.mat'])
 %% FREESURFER SEGMENTATION
 indicesToExclude = [];
 segmentation = readtable([freesurferBrainVolumesPath, segmentationFilename]);

@@ -54,7 +54,7 @@ brainMaskFilename = 'AllResampled_BrainMask_05_91x109x91.nii';
 gmMaskFilename = 'AllResampled_GreyMask_02_91x109x91.nii';
 wmMaskFilename = 'AllResampled_WhiteMask_09_91x109x91.nii';
 csfMaskFilename = 'AllResampled_CsfMask_07_91x109x91.nii';
-overwriteNifti = 1; % If 0 won't process existing Nfiti data in the DPARSF folder
+overwriteNifti = 0; % If 0 won't process existing Nfiti data in the DPARSF folder
 format = '.nii.gz';
 dcmHeadersFilename = 'dcmHeaders.mat';
 
@@ -85,10 +85,9 @@ end
 %     end
 % end
 %% GRAND MEAN NORMALIZATION, CHECK COVERAGE AND SPATIAL ALGINMENT
-saveNormalizedImages = 1;
+saveNormalizedImages = 0;
 scaleMeanValue = 10000;
-preprocessedImageSubdir = '/FunImgARWSDCF/';
-outputNormalizedImageSubdir = '/FunImgARWSDCFN/';
+preprocessedImageSubdir = '/FunImgARWSDCFN/';
 preprocessedImageFilenames = 'Filtered_4DVolume.nii';
 preprocessedImagesDparsfPath = [dparsfDataPath '/' preprocessedImageSubdir '/'];
 % read masks:
@@ -113,14 +112,8 @@ for i = 1 : numel(subjectNames)
         wmMeanValue(i) = mean(image(wm_mask_4d(:,:,:,size(image,4))));
         csfMeanValue(i) = mean(image(csf_mask_4d(:,:,:,size(image,4))));
         image_norm = image ./ grandMeanValue(i) .* scaleMeanValue; % Grand mean intensity normalization.
-        if saveNormalizedImages
-            if ~exist(fullfile(dparsfDataPath, outputNormalizedImageSubdir, subjectNames{i}))
-                mkdir(fullfile(dparsfDataPath, outputNormalizedImageSubdir, subjectNames{i}))
-            end
-            niftiwrite(image_norm,fullfile(dparsfDataPath, outputNormalizedImageSubdir, subjectNames{i}, [preprocessedImageFilenames '.gz']), info)
-        end
         gmVoxels(j,:) = image(gm_mask_4d(:,:,:,size(image,4)));
-        preprocessedImages(:,:,:,j) = mean(image_norm, 4);
+        preprocessedImages(:,:,:,j) = mean(image, 4);
         %meanBrainSignal = 
         j = j + 1;
     end

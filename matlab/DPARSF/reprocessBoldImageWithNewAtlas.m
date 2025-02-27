@@ -16,9 +16,10 @@ addpath(genpath('../'))
 %% PREPROCESSED DATA PATH
 dataPath = '/home/martin/data_imaging/ADNIdata/fMRI_first_batch_to_process_2023_04_27/Procesadas_2mm_highpass/';
 dataPath = '/home/martin/data_imaging/CovidProject/Estudio/PreprocessedMRI/DPARSF/';
-dataPath = '/home/martin/data_imaging/ADNIdata/Trini/Batch4/2mm/';
-dataPath = '/home/martin/data_imaging/ADNIdata/Trini/'
-preprocessedFolder = 'NiftiPreprocessedAllBatchesNorm';%'FunImgARWSDCFN';
+dataPath = '/home/martin/data_imaging/ADNIdata/fMRI_ADNI2_ADNI3_initial_visit/';
+adniCollectionFullFilename = '/home/martin/data/UNSAM/CEMSC3/ProcesamientoADNI/DataBase/fMRI_screening_initalvisit/fMRI_screening_initalvisit_2023_04_27.csv';
+adniMergeFullFilename = '/home/martin/data_imaging/ADNIdata/StudyInfo/Study_Info/ADNIMERGE_12Jul2023.csv';
+preprocessedFolder = 'NiftiPreprocessedAllBatches';%'FunImgARWSDCFN';
 preprocessedDataPath = fullfile(dataPath, preprocessedFolder);
 indexScanner = 1; % Siemens=1, GE=2, Philips=3.
 
@@ -26,7 +27,7 @@ indexScanner = 1; % Siemens=1, GE=2, Philips=3.
 atlasName = 'AAL';%'Schaefer2018_1000Parcels_17Networks';
 suffixROIFilenames = 'ROISignals_';
 outputPath = fullfile(dataPath, ['Results' atlasName]);
-outputPathSignals = fullfile(outputPath, ['ROISignals_' preprocessedFolder]);
+outputPathSignals = fullfile(outputPath, ['ROISignals_' atlasName '_' preprocessedFolder]);
 
 if ~isfolder(outputPathSignals)
     mkdir(outputPathSignals);
@@ -74,7 +75,7 @@ schaeferSignalsAllSubjects = {};
 % Iterate over each preprocessed fMRI file
 for i = 1 : numel(fmriSubjects)
     % Read the fMRI data
-    niftiFilename = dir(fullfile(preprocessedDataPath, fmriSubjects(i).name, '*.nii'));
+    niftiFilename = dir(fullfile(preprocessedDataPath, fmriSubjects(i).name, '*.nii*'));
     fmriVolume = niftiread(fullfile(preprocessedDataPath, fmriSubjects(i).name, niftiFilename.name));
     fmriInfo = niftiinfo(fullfile(preprocessedDataPath, fmriSubjects(i).name, niftiFilename.name));
     
@@ -111,7 +112,6 @@ for i = 1 : numel(fmriSubjects)
 end
 schaeferSignalsAllSubjects{i} = signals;
 %% CREATE A CSV WITH THE MERGE DATA OF THE  DATA
-adniCollectionFullFilename = '/data_imaging/ADNIdata/ADNI3_Advanced_fMRI/ADNI3_AdvancedFmri/ADNI3_Advanced_fMRI_6_27_2023.csv';
 % Load adni dicom collection csv:
 adniCollectionData = readtable(adniCollectionFullFilename);
 % Add new fields to the table:
@@ -129,7 +129,6 @@ adniCollectionData.TAU = NaN(size(adniCollectionData,1), 1);
 adniCollectionData.PTAU = NaN(size(adniCollectionData,1), 1);
 
 % Load the adni merge csv with a summary of all the data
-adniMergeFullFilename = '/home/martin/data_imaging/ADNIdata/StudyInfo/Study_Info/ADNIMERGE_12Jul2023.csv';
 adniMergeData = readtable(adniMergeFullFilename);
 for i = 1 : numel(fmriSubjects)
     % It should appear only once in this data collection.
@@ -259,7 +258,7 @@ writetable(adniCollectionData, fullFilenameCollectionExtended);
 [valuesCollection, channelsCollection] = hist(categorical(adniCollectionData.ResearchGroup));
 %% CHECK THE IMAGES
 for i = 1 : numel(fmriSubjects)
-    signals = load([outputPathSignals suffixROIFilenames fmriSubjects(i).name '.mat']);
-    fig = check_fMRI_bold_signals(signals.schaeferSignals);
+    signals = load(fullfile(outputPathSignals, [suffixROIFilenames fmriSubjects(i).name '.mat']));
+    fig = check_fMRI_bold_signals(signals.signals);
     close all
 end
