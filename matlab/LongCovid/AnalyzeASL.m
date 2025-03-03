@@ -9,10 +9,11 @@ loadData = 0;
 %% PATHS AND FILENAMES
 studyDataPath = [dataPartitionPath '/UNSAM/CovidProject2/'];
 resultsPath = [studyDataPath '/DataAnalysis/'];
-summaryExcelFilename = fullfile(studyDataPath, 'Respuestas.xlsx');
+responseExcelFilename = fullfile(studyDataPath, 'Respuestas.xlsx');
+summaryExcelFilename = fullfile(studyDataPath, 'ResumenRespuestas.xlsx');
 volunteersExcelFilename = fullfile(studyDataPath, 'VoluntariosProyectoCovidProlongado.xlsx');
 % ASL
-aslResultsPath = fullfile(resultsPath, 'ASL');
+aslResultsPath = fullfile(resultsPath, 'ASL', 'Abstract');
 cbfDKFilename = fullfile(aslResultsPath, 'mean_qCBF_StandardSpace_Desikan_Killiany_MNI_SPM12_PVC2.csv');
 cbfHammersFilename = fullfile(aslResultsPath, 'mean_qCBF_StandardSpace_Hammers_PVC2.csv');
 cbfHOcortFilename = fullfile(aslResultsPath, 'mean_qCBF_StandardSpace_HOcort_CONN_2024_PVC2.csv');
@@ -72,12 +73,12 @@ subjectsToExcludeAsl = {'CP0015', 'CP0075', 'CP0076','CP0078', 'CP0079', 'CP0062
 subjectsToExcludeAsl = {'CP0015', 'CP0075', 'CP0076','CP0078', 'CP0079', 'CP0062', 'CP0105', 'CP0216',...
     'CP0114', 'CP0140', 'CP0141', 'CP0144', 'CP0196', 'CP0219', 'CP0220', 'CP0221', 'CP0222'};% With missing data
 
-subjectsWithVascularSginal = {'CP0176', 'CP0178', 'CP0183', 'CP0188', 'CP0193', 'CP0205', 'CP0044', 'CP0053', 'CP0054', 'CP0061', ...
-    'CP0107', 'CP0108', 'CP0123', 'CP0142', 'CP0147', 'CP0154'};% With missing data
+subjectsWithVascularSginal = { 'CP0044', 'CP0053', 'CP0054', 'CP0061', 'CP0107', 'CP0108', 'CP0123', 'CP0142', ...
+    'CP0147', 'CP0154', 'CP0176', 'CP0178', 'CP0183', 'CP0188', 'CP0193', 'CP0205',};% With missing data
+subjectsWithVascularSginal = {'CP0031','CP0044', 'CP0053', 'CP0054', 'CP0061', 'CP0096','CP0107','CP0108','CP0118','CP0123', 'CP0142', ...
+    'CP0147', 'CP0154','CP0167', 'CP0176','CP0178', 'CP0183', 'CP0188','CP0193','CP0199', 'CP0205'};
 if excludeVascular
-    for i = 1 : numel(subjectsWithVascularSginal)
-        subjectsToExcludeAsl{numel(subjectsToExcludeAsl)+i} = subjectsWithVascularSginal{i};
-    end
+    subjectsToExcludeAsl = [subjectsToExcludeAsl subjectsWithVascularSginal];
 end
 %% READ ASL DATA
 cbfDK = readtable(cbfDKFilename);
@@ -140,68 +141,15 @@ if sum(indicesCovid ~= indicesCovidHammers) ~= 0
     error('Indices for controls dont match for different tables');
 end
 
-%% READ 4D IMAGE
-imageAllAsl = niftiread(aslAllImagesFilename);
-imageInfo = niftiinfo(aslAllImagesFilename);
-% CREATE SMOOTHED IMAGES
-fwhm_mm = [4 4 4]; sigma_mm = fwhm_mm./2.35; sigma_voxels = sigma_mm./imageInfo.PixelDimensions(1:3);
-fwhm8_mm = [8 8 8]; sigma8_mm = fwhm8_mm./2.35; sigma8_voxels = sigma8_mm./imageInfo.PixelDimensions(1:3);
-for i = 1 : size(imageAllAsl,5)
-    imageAllAslSmoothed_4mm(:,:,:,i) = imgaussfilt3(imageAllAsl(:,:,:,1,i), sigma_voxels);
-    imageAllAslSmoothed_8mm(:,:,:,i) = imgaussfilt3(imageAllAsl(:,:,:,1,i), sigma8_voxels);
-end
-imageInfo4D = imageInfo;
-imageInfo4D.ImageSize = size(imageAllAslSmoothed_4mm);
-imageInfo4D.PixelDimensions = [imageInfo.PixelDimensions(1:3) 1];
-imageInfo4D.raw.dim = [4 imageInfo4D.ImageSize];
-imageInfo4D.raw.pixdim = [-1 imageInfo4D.PixelDimensions];
-niftiwrite(imageAllAslSmoothed_4mm, fullfile(aslImagesPath, 'asl_all_subjects_smoothed_4mm.nii'), imageInfo4D, 'Compressed', 1);
-niftiwrite(imageAllAslSmoothed_8mm, fullfile(aslImagesPath, 'asl_all_subjects_smoothed_8mm.nii'), imageInfo4D, 'Compressed', 1);
-
-indicesImages = readtable(aslAllImagesNamesFilename);
-indicesImagesToInclude = [];
-for i = 1 : numel(cbfDK.ID)
-    ind=find(strcmp(cbfDK.ID{i}, indicesImages.Subject)>0);
-    if ~isempty(ind)
-       indicesImagesToInclude = [indicesImagesToInclude ind'];
-    else
-        warning(sprintf('Subject %s without image.\n', cbfDK.ID{i}));
-    end
-end
-imageAllAsl = imageAllAsl(:,:,:,indicesImagesToInclude);
-imageAllAslSmoothed_4mm = imageAllAslSmoothed_4mm(:,:,:,indicesImagesToInclude);
-imageAllAslSmoothed_8mm = imageAllAslSmoothed_8mm(:,:,:,indicesImagesToInclude);
-indicesImages = indicesImages(indicesImagesToInclude,:);
-
-% Get an atlas for each group:
-subjectsControls = cbfDK.ID(indicesControls);
-subjectsCovid = cbfDK.ID(indicesCovid);
-imagesAslControls = imageAllAslSmoothed_4mm(:,:,:,indicesControls);
-imagesAslCovid = imageAllAslSmoothed_4mm(:,:,:,indicesCovid);
-meanCbfImageControls = mean(imagesAslControls,4);
-meanCbfImageCovid = mean(imagesAslCovid,4);
-stdCbfImageControls = std(imagesAslControls,0,4);
-stdCbfImageCovid = std(imagesAslCovid,0,4);
-
-medianCbfImageControls = median(imagesAslControls,4);
-medianCbfImageCovid = median(imagesAslCovid,4);
-
-imageInfo.ImageSize = size(meanCbfImageControls);
-imageInfo.PixelDimensions = imageInfo.PixelDimensions(1:3);
-imageInfo.raw.dim = [3 imageInfo.ImageSize];
-imageInfo.raw.pixdim = [-1 imageInfo.PixelDimensions];
-niftiwrite(meanCbfImageControls, fullfile(aslImagesPath, 'meanCbfImageControls.nii'), imageInfo, 'Compressed', 1);
-niftiwrite(meanCbfImageCovid, fullfile(aslImagesPath, 'meanCbfImageCovid.nii'), imageInfo, 'Compressed', 1);
-niftiwrite(stdCbfImageControls, fullfile(aslImagesPath, 'stdCbfImageControls.nii'), imageInfo, 'Compressed', 1);
-niftiwrite(stdCbfImageCovid, fullfile(aslImagesPath, 'stdCbfImageCovid.nii'), imageInfo, 'Compressed', 1);
-niftiwrite(medianCbfImageControls, fullfile(aslImagesPath, 'medianCbfImageControls.nii'), imageInfo, 'Compressed', 1);
-niftiwrite(medianCbfImageCovid, fullfile(aslImagesPath, 'medianCbfImageCovid.nii'), imageInfo, 'Compressed', 1);
 %% LOAD QUESTIONNAIRE
 %responsesTable = readtable(summaryExcelFilename, 'NumHeaderLines', 3);
-responsesTable = readtable(summaryExcelFilename,'Sheet', 'respuestasCuestionario', 'Range', 'A4:EJ193', 'ReadVariableNames', false, 'ReadRowNames', false);
+responsesTable = readtable(responseExcelFilename,'Sheet', 'respuestasCuestionario', 'Range', 'A4:EJ193', 'ReadVariableNames', false, 'ReadRowNames', false);
+summaryTable = readtable(summaryExcelFilename,'Sheet', 'resumenTotal','ReadVariableNames', true, 'ReadRowNames', false);
+
 % Leave only the data of the subjects with ASL
 indicesWithAsl = [];
 indicesAslWithData = []; % Both lists need to be matched, there can be missing data in both.
+indicesSummaryWithData = [];
 for i = 1 : numel(responsesTable.Var1)
     ind=find(strcmp(responsesTable.Var1{i}, cbfDK.ID)>0);
     if ~isempty(ind)
@@ -217,6 +165,7 @@ for i = 1 : numel(responsesTable.Var1)
         %     end
         % end
     end
+
 end
 
 cbfDK = cbfDK(indicesAslWithData,:);
@@ -224,6 +173,15 @@ cbfHammers = cbfHammers(indicesAslWithData,:);
 cbfHammers_regions = cbfHammers_regions(indicesAslWithData,:); %TODO: CHECK
 cbfDK_regions = cbfDK_regions(indicesAslWithData,:);
 responsesMatchedTable = responsesTable(indicesWithAsl,:);
+for i = 1 : numel(responsesTable.Var1)
+    ind=find(strcmp(responsesTable.Var1{i}, summaryTable.ID)>0);
+    if ~isempty(ind)
+       indicesSummaryWithData = [indicesSummaryWithData ind'];
+    else
+        warning(sprintf('Subject %s not in summary.\n', responsesTable.Var1{i}));
+    end
+end
+summaryTable = summaryTable(indicesSummaryWithData);
 %Re estimate indices for groups:
 %group{strcmp(group, 'DUDA')} = 'COVID';
 indicesControls = find(strcmp(cbfDK.Grupo, groupNames{1}));
@@ -398,6 +356,120 @@ allCognitiveTests = cognitiveMatchedTable(:,3:29);
 allCognitiveTests_score = table2array(cognitiveMatchedTable(:,3:3:29));
 allCognitiveTests_perc = table2array(cognitiveMatchedTable(:,4:3:29));
 allCognitiveTests_perf = table2array(cognitiveMatchedTable(:,5:3:29));
+
+%% ANCOVA
+moca_perc = allCognitiveTests_perc(:,end);
+tbl = table(group, age_years, gender, moca_perc, fas);
+for i = 1 : size(cbfHammers_regions, 2)
+    metric = cbfHammers_regions(:,i);    
+    %[p(i), table{i}, stats{i}] = anova(tbl, "metric ~ group + age + eTIV");
+    anovaTable{i} = anova(tbl, metric,categoricalFactors=["group", "gender"]);
+    p(i) = anovaTable{i}.stats.pValue(1);
+    p_age(i) = anovaTable{i}.stats.pValue(2);
+    p_sex(i) = anovaTable{i}.stats.pValue(3);
+    p_moca(i) = anovaTable{i}.stats.pValue(4);
+    p_fas(i) = anovaTable{i}.stats.pValue(5);
+end
+
+% Identify regions with signficant p values
+indicesSign_cbfHammers = find(p < 0.05);
+% Get the names:
+disp('Regions with signifcant differences:')
+
+
+for i = 1 : numel(indicesSign_cbfHammers)
+    fprintf("Hammers. Region %s, p=%.3f, p_age=%.3f, p_sex=%.3f, p_moca=%.3f, p_fas=%.3f. Median cbf: controls=%.1f, covid=%.1f. Num NaN: %d\n", ...
+        cbfHammers.Properties.VariableNames{indexFirstRegion+indicesSign_cbfHammers(i)-1}, p(indicesSign_cbfHammers(i)), p_age(indicesSign_cbfHammers(i)), p_sex(indicesSign_cbfHammers(i)), p_moca(indicesSign_cbfHammers(i)), p_fas(indicesSign_cbfHammers(i)), ...
+        median(cbfHammers_regions(indicesControls,indicesSign_cbfHammers(i)), "omitnan"), median(cbfHammers_regions(indicesCovid, indicesSign_cbfHammers(i)), "omitnan"),...
+        sum(isnan(cbfHammers_regions(:, indicesSign_cbfHammers(i)))));
+end
+%% GET A TABLE WITH THESE RESULTS
+tbl = table(cbfDK.ID, group, age_years, gender, moca_perc, fas);
+
+for i = 1 : numel(indicesSign_cbfHammers)
+    tbl(:,end+1) = array2table(cbfHammers_regions(:,indicesSign_cbfHammers(i)));
+    tbl.Properties.VariableNames{end}= cbfHammers.Properties.VariableNames{indexFirstRegion+indicesSign_cbfHammers(i)-1};
+end
+writetable(tbl, fullfile(outputPath, 'AncovaSignificant.csv'))
+
+%% TABLE TO EXPLORE MACHINE LEARNING METHODS
+tbl = table(group, age_years, gender, moca_perc, fas);
+%allCognitiveTests_perc);
+%% READ 4D IMAGE
+imageAllAsl = niftiread(aslAllImagesFilename);
+imageInfo = niftiinfo(aslAllImagesFilename);
+% CREATE SMOOTHED IMAGES
+fwhm_mm = [4 4 4]; sigma_mm = fwhm_mm./2.35; sigma_voxels = sigma_mm./imageInfo.PixelDimensions(1:3);
+fwhm8_mm = [8 8 8]; sigma8_mm = fwhm8_mm./2.35; sigma8_voxels = sigma8_mm./imageInfo.PixelDimensions(1:3);
+for i = 1 : size(imageAllAsl,5)
+    imageAllAslSmoothed_4mm(:,:,:,i) = imgaussfilt3(imageAllAsl(:,:,:,1,i), sigma_voxels);
+    imageAllAslSmoothed_8mm(:,:,:,i) = imgaussfilt3(imageAllAsl(:,:,:,1,i), sigma8_voxels);
+end
+imageInfo4D = imageInfo;
+imageInfo4D.ImageSize = size(imageAllAslSmoothed_4mm);
+imageInfo4D.PixelDimensions = [imageInfo.PixelDimensions(1:3) 1];
+imageInfo4D.raw.dim = [4 imageInfo4D.ImageSize];
+imageInfo4D.raw.pixdim = [-1 imageInfo4D.PixelDimensions];
+niftiwrite(imageAllAslSmoothed_4mm, fullfile(aslImagesPath, 'asl_all_subjects_smoothed_4mm.nii'), imageInfo4D, 'Compressed', 1);
+niftiwrite(imageAllAslSmoothed_8mm, fullfile(aslImagesPath, 'asl_all_subjects_smoothed_8mm.nii'), imageInfo4D, 'Compressed', 1);
+
+indicesImages = readtable(aslAllImagesNamesFilename);
+indicesImagesToInclude = [];
+for i = 1 : numel(cbfDK.ID)
+    ind=find(strcmp(cbfDK.ID{i}, indicesImages.Subject)>0);
+    if ~isempty(ind)
+       indicesImagesToInclude = [indicesImagesToInclude ind'];
+    else
+        warning(sprintf('Subject %s without image.\n', cbfDK.ID{i}));
+    end
+end
+imageAllAsl = imageAllAsl(:,:,:,indicesImagesToInclude);
+imageAllAslSmoothed_4mm = imageAllAslSmoothed_4mm(:,:,:,indicesImagesToInclude);
+imageAllAslSmoothed_8mm = imageAllAslSmoothed_8mm(:,:,:,indicesImagesToInclude);
+indicesImages = indicesImages(indicesImagesToInclude,:);
+
+% Get an atlas for each group:
+subjectsControls = cbfDK.ID(indicesControls);
+subjectsCovid = cbfDK.ID(indicesCovid);
+imagesAslControls = imageAllAslSmoothed_4mm(:,:,:,indicesControls);
+imagesAslCovid = imageAllAslSmoothed_4mm(:,:,:,indicesCovid);
+meanCbfImageControls = mean(imagesAslControls,4);
+meanCbfImageCovid = mean(imagesAslCovid,4);
+stdCbfImageControls = std(imagesAslControls,0,4);
+stdCbfImageCovid = std(imagesAslCovid,0,4);
+
+medianCbfImageControls = median(imagesAslControls,4);
+medianCbfImageCovid = median(imagesAslCovid,4);
+
+imageInfo.ImageSize = size(meanCbfImageControls);
+imageInfo.PixelDimensions = imageInfo.PixelDimensions(1:3);
+imageInfo.raw.dim = [3 imageInfo.ImageSize];
+imageInfo.raw.pixdim = [-1 imageInfo.PixelDimensions];
+niftiwrite(meanCbfImageControls, fullfile(aslImagesPath, 'meanCbfImageControls.nii'), imageInfo, 'Compressed', 1);
+niftiwrite(meanCbfImageCovid, fullfile(aslImagesPath, 'meanCbfImageCovid.nii'), imageInfo, 'Compressed', 1);
+niftiwrite(stdCbfImageControls, fullfile(aslImagesPath, 'stdCbfImageControls.nii'), imageInfo, 'Compressed', 1);
+niftiwrite(stdCbfImageCovid, fullfile(aslImagesPath, 'stdCbfImageCovid.nii'), imageInfo, 'Compressed', 1);
+niftiwrite(medianCbfImageControls, fullfile(aslImagesPath, 'medianCbfImageControls.nii'), imageInfo, 'Compressed', 1);
+niftiwrite(medianCbfImageCovid, fullfile(aslImagesPath, 'medianCbfImageCovid.nii'), imageInfo, 'Compressed', 1);
+%% BOXPLOTS FOR HAMMERS
+% Concatenate data from both groups
+cbf_all = [meanRoisHammersControls; meanRoisHammersCovid];  % Matrix ((N1 + N2) x M)
+
+% Create group labels
+group_labels = [repmat({'CONTROLS'}, size(meanRoisHammersControls, 1), 1); repmat({'COVID'}, size(meanRoisHammersCovid, 1), 1)];
+
+% Create ROI labels
+num_rois = size(cbf_all, 2);
+roi_labels = repmat(1:num_rois, size(cbf_all, 1), 1);
+roi_labels = roi_labels(:);  % Vectorize for boxplot
+
+% Reshape data and group labels to match the boxplot input format
+%cbf_all = cbf_all(:);  % Convert matrix to column vector
+%group_labels = repmat(group_labels, num_rois, 1);  % Repeat group labels for each ROI
+
+figure; subplot(1,3,1);boxchart(categorical(group_labels), cbf_all(:,85))
+subplot(1,3,2);boxchart(categorical(group_labels), cbf_all(:,12))
+subplot(1,3,3);boxchart(categorical(group_labels), cbf_all(:,33))
 %% LOAD ATLASES
 mni152 = niftiread('/usr/local/fsl/data/standard/MNI152_T1_1mm.nii.gz');
 mni152_info = niftiread('/usr/local/fsl/data/standard/MNI152_T1_1mm.nii.gz');
@@ -450,6 +522,7 @@ niftiwrite(single(meanHammersControls), fullfile(aslImagesPath, 'meanHammersCont
 niftiwrite(single(meanHammersCovid), fullfile(aslImagesPath, 'meanHammersCovid.nii'), imageInfo, 'Compressed', 1);
 writetable(tableControls, fullfile(aslImagesPath, 'meanRoisHammersControls.csv'))
 writetable(tableCovid, fullfile(aslImagesPath, 'meanRoisHammersCovid.csv'))
+
 %% PROCESS INDIVIDUAL IMAGES FROM EXPLORE ASL USING MASK
 pathPopulationAnalysis = '/media/martin/PortableSSD/ASLDirSol/BIDS/derivatives/ExploreASL/Population/';
 
@@ -463,59 +536,7 @@ for j = 1 : numel(cbfHammers.ID)
     end
     j
 end
-%% BOXPLOTS FOR HAMMERS
-% Concatenate data from both groups
-cbf_all = [meanRoisHammersControls; meanRoisHammersCovid];  % Matrix ((N1 + N2) x M)
 
-% Create group labels
-group_labels = [repmat({'CONTROLS'}, size(meanRoisHammersControls, 1), 1); repmat({'COVID'}, size(meanRoisHammersCovid, 1), 1)];
-
-% Create ROI labels
-num_rois = size(cbf_all, 2);
-roi_labels = repmat(1:num_rois, size(cbf_all, 1), 1);
-roi_labels = roi_labels(:);  % Vectorize for boxplot
-
-% Reshape data and group labels to match the boxplot input format
-%cbf_all = cbf_all(:);  % Convert matrix to column vector
-%group_labels = repmat(group_labels, num_rois, 1);  % Repeat group labels for each ROI
-
-figure; subplot(1,3,1);boxchart(categorical(group_labels), cbf_all(:,85))
-subplot(1,3,2);boxchart(categorical(group_labels), cbf_all(:,12))
-subplot(1,3,3);boxchart(categorical(group_labels), cbf_all(:,33))
-%% ANCOVA
-moca_perc = allCognitiveTests_perc(:,end);
-tbl = table(group, age_years, gender, moca_perc, fas);
-for i = 1 : size(cbfHammers_regions, 2)
-    metric = cbfHammers_regions(:,i);    
-    %[p(i), table{i}, stats{i}] = anova(tbl, "metric ~ group + age + eTIV");
-    anovaTable{i} = anova(tbl, metric,categoricalFactors=["group", "gender"]);
-    p(i) = anovaTable{i}.stats.pValue(1);
-    p_age(i) = anovaTable{i}.stats.pValue(2);
-    p_sex(i) = anovaTable{i}.stats.pValue(3);
-    p_moca(i) = anovaTable{i}.stats.pValue(4);
-    p_fas(i) = anovaTable{i}.stats.pValue(5);
-end
-
-% Identify regions with signficant p values
-indicesSign_cbfHammers = find(p < 0.05);
-% Get the names:
-disp('Regions with signifcant differences:')
-
-
-for i = 1 : numel(indicesSign_cbfHammers)
-    fprintf("Hammers. Region %s, p=%.3f, p_age=%.3f, p_sex=%.3f, p_moca=%.3f, p_fas=%.3f. Median cbf: controls=%.1f, covid=%.1f. Num NaN: %d\n", ...
-        cbfHammers.Properties.VariableNames{indexFirstRegion+indicesSign_cbfHammers(i)-1}, p(indicesSign_cbfHammers(i)), p_age(indicesSign_cbfHammers(i)), p_sex(indicesSign_cbfHammers(i)), p_moca(indicesSign_cbfHammers(i)), p_fas(indicesSign_cbfHammers(i)), ...
-        median(cbfHammers_regions(indicesControls,indicesSign_cbfHammers(i)), "omitnan"), median(cbfHammers_regions(indicesCovid, indicesSign_cbfHammers(i)), "omitnan"),...
-        sum(isnan(cbfHammers_regions(:, indicesSign_cbfHammers(i)))));
-end
-%% GET A TABLE WITH THESE RESULTS
-tbl = table(cbfDK.ID, group, age_years, gender, moca_perc, fas);
-
-for i = 1 : numel(indicesSign_cbfHammers)
-    tbl(:,end+1) = array2table(cbfHammers_regions(:,indicesSign_cbfHammers(i)));
-    tbl.Properties.VariableNames{end}= cbfHammers.Properties.VariableNames{indexFirstRegion+indicesSign_cbfHammers(i)-1};
-end
-writetable(tbl, fullfile(outputPath, 'AncovaSignificant.csv'))
 %% ANCOVA HAMMERS IMAGES
 moca_perc = allCognitiveTests_perc(:,end);
 tbl = table(group, age_years, gender, moca_perc, fas);
