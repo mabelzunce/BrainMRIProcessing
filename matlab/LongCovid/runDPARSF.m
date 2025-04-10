@@ -23,7 +23,7 @@ niftiPath = [dataPath '/Nifti/'];
 dparsfDataPath = [imagingPartitionPath '/CovidProject/Estudio2/PreprocessedMRI/DPARSF/'];
 indexScanner = 1; % Siemens=1, GE=2, Philips=3.
 % Filename with the available MRI data:
-filenameMriInfo = [dataPath 'mriInfoAndProcessing_2024_09_16.mat'];
+filenameMriInfo = [dataPath 'mriInfoAndProcessing_2025_04_08.mat'];
 %% DATA INFO
 mriInfo = load(filenameMriInfo);
 %% CONFIG
@@ -58,6 +58,14 @@ if bandPassFilter ~= 1
     cfg.Filter.ALowPass_HighCutoff = 0; % 0 mean no cut off.
 end
 
+% Start from a different  point
+% cfg.StartingDirName = 'FunImgARWSD';
+% cfg.IsNormalize = 0;  % Do not normalize again
+% cfg.IsSliceTiming = 0;  % Slice timing already done
+% cfg.IsRealign = 0;  % Already realigned
+% cfg.IsSmooth = 0;
+% cfg.IsDetrend = 0;
+% cfg.IsCovremove = 0;
 % Voxel size:
 cfg.Normalize.VoxSize = [2 2 2];
 % Remove first time points:
@@ -160,6 +168,7 @@ cfg.SubjectNum = numel(subjectNamesToProcess);
 cfg.WorkingDir = dparsfDataPath;
 cfg.DataProcessDir = dparsfDataPath;
 cfg.TimePoints = 0;
+% Start from a different  point
 tic
 [Error, cfg]=DPARSFA_run(cfg);
 toc

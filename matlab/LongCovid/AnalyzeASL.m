@@ -23,6 +23,8 @@ expAslThalamusFilename = fullfile(aslResultsPath, 'mean_qCBF_StandardSpace_Thala
 expAslTotalGMFilename = fullfile(aslResultsPath, 'mean_qCBF_StandardSpace_TotalGM_2024_PVC2.csv');
 expAslTotalWMFilename = fullfile(aslResultsPath, 'mean_qCBF_StandardSpace_TotalWM_PVC2.csv');
 expAslDeepWMFilename = fullfile(aslResultsPath, 'mean_qCBF_StandardSpace_DeepWM_2024_PVC2.csv');
+% SCOV:
+scovFilename = fullfile(aslResultsPath, 'perfusion_sCOV_PVC0.csv');
 % ASL Images
 aslImagesPath = [imagingPartitionPath 'CovidProject/Estudio2/PreprocessedMRI/ASL/'];
 aslAllImagesFilename = fullfile(aslImagesPath, 'asl_total_covid_4d.nii.gz');
@@ -65,13 +67,13 @@ colsHealthHistory = 38:55;
 % FAS QUEATIONNAIRE
 colFAS = 75;
 %% SUBJECTS TO EXCLUDE:
-excludeVascular = 1;
+excludeVascular = 0;
 % Apply some filters for unwanted volunteers:
-subjectsToExclude = {'CP0011', 'CP0015',''}; % 11 (foreign language) and 15 (elder and probaly with some form of dementia). Remove empty names.
+subjectsToExclude = {'CP0011', 'CP0015','CP0087'}; % 11 (foreign language) and 15 (elder and probaly with some form of dementia). Remove empty names.
 % subjects to exclude because of artefacts or problems with the images:
 subjectsToExcludeAsl = {'CP0015', 'CP0075', 'CP0076','CP0078', 'CP0079', 'CP0062', 'CP0105', 'CP0216'};
-subjectsToExcludeAsl = {'CP0015', 'CP0075', 'CP0076','CP0078', 'CP0079', 'CP0062', 'CP0105', 'CP0216',...
-    'CP0114', 'CP0140', 'CP0141', 'CP0144', 'CP0196', 'CP0219', 'CP0220', 'CP0221', 'CP0222'};% With missing data
+subjectsToExcludeAsl = {'CP0015', 'CP0035', 'CP0075', 'CP0076','CP0078', 'CP0079', 'CP0062', 'CP0105', 'CP0216',...
+    'CP0114', 'CP0140', 'CP0141', 'CP0144', 'CP0192', 'CP0196', 'CP0219', 'CP0220', 'CP0221', 'CP0222'};% With missing data
 
 subjectsWithVascularSginal = { 'CP0044', 'CP0053', 'CP0054', 'CP0061', 'CP0107', 'CP0108', 'CP0123', 'CP0142', ...
     'CP0147', 'CP0154', 'CP0176', 'CP0178', 'CP0183', 'CP0188', 'CP0193', 'CP0205',};% With missing data
@@ -87,6 +89,7 @@ cbfGM = readtable(expAslTotalGMFilename);
 expAslStruct = readtable(expAslStructFilename);
 expAslDeepWM = readtable(expAslDeepWMFilename);
 expAslTotalWM = readtable(expAslTotalWMFilename);
+scov = readtable(scovFilename);
 % Sort by name the tables:
 cbfDK = sortrows(cbfDK,1);
 cbfHammers = sortrows(cbfHammers,1);
@@ -94,6 +97,7 @@ cbfGM = sortrows(cbfGM,1);
 expAslStruct = sortrows(expAslStruct,1);
 expAslDeepWM = sortrows(expAslDeepWM,1);
 expAslTotalWM = sortrows(expAslTotalWM,1);
+scov = sortrows(scov,1);
 
 % Ger gourps of subjects with vascular:
 for i = 1 : numel(subjectsWithVascularSginal)
@@ -103,10 +107,16 @@ end
 
 % Remove data to exclude:
 indicesToExclude = [];
-for i = 1 : numel(subjectsToExcludeAsl)
-    ind=find(strcmp(subjectsToExcludeAsl{i}, cbfDK.ID)>0);
+for i = 1 : numel(subjectsToExclude)
+    ind=find(strcmp(subjectsToExclude{i}, cbfDK.ID)>0);
     if ~isempty(ind)
-       indicesToExclude = [indicesToExclude ind];
+       indicesToExclude = [indicesToExclude ind(1)];
+    end
+end
+for i = 1 : numel(subjectsToExcludeAsl)
+    ind=find((strcmp(subjectsToExcludeAsl{i}, cbfDK.ID))>0);
+    if ~isempty(ind)
+       indicesToExclude = [indicesToExclude ind(1)];
     end
 end
 cbfDK(indicesToExclude,:) = [];
@@ -114,6 +124,41 @@ cbfHammers(indicesToExclude,:) = [];
 expAslStruct(indicesToExclude,:) = [];
 expAslDeepWM(indicesToExclude,:) = [];
 expAslTotalWM(indicesToExclude,:) = [];
+
+% Match scov with the others:
+indicesScov = [];
+indicesNonCov = [];
+for i = 1 : numel(cbfDK.ID)
+    ind=find(strcmp(cbfDK.ID{i}, scov.participant_id)>0);
+    if ~isempty(ind)
+       indicesScov = [indicesScov ind];
+    else
+        warning(sprintf('Subjects %s not found', cbfDK.ID{i}));
+        indicesNonCov = [indicesNonCov i];
+    end
+end
+scov = scov(indicesScov,:);
+% % Check if there cases with scov and not cbfDK
+% indicesToExclude = [];
+% for i = 1 : numel(scov.participant_id)
+%     ind=find(strcmp(scov.participant_id{i}, cbfDK.ID)>0);
+%     if isempty(ind)
+%        indicesToExclude = [indicesToExclude ind(1)];
+%        warning(sprintf('Subjects %s without cbf data.', scov.participant_id{i}))
+%     end
+% end
+
+cbfDK(indicesNonCov,:) = [];
+cbfHammers(indicesNonCov,:) = [];
+expAslStruct(indicesNonCov,:) = [];
+expAslDeepWM(indicesNonCov,:) = [];
+expAslTotalWM(indicesNonCov,:) = [];
+
+% Check the ids:
+if sum(strcmp(cbfDK.ID, scov.participant_id) == numel(cbfDK.ID))
+    error('SCOV and CBF dont match.')
+end
+
 % FILTER COLUMNS WITH NANS
 indicesNaNs = find(sum(isnan(table2array(cbfDK(:,2:end-1))),1) > 10); % Remove columns with more than 10 NaN.
 cbfDK(:,indicesNaNs+1) = []; % +1 because the indices does not count the first column
@@ -172,6 +217,7 @@ cbfDK = cbfDK(indicesAslWithData,:);
 cbfHammers = cbfHammers(indicesAslWithData,:);
 cbfHammers_regions = cbfHammers_regions(indicesAslWithData,:); %TODO: CHECK
 cbfDK_regions = cbfDK_regions(indicesAslWithData,:);
+scov = scov(indicesAslWithData,:);
 responsesMatchedTable = responsesTable(indicesWithAsl,:);
 for i = 1 : numel(responsesTable.Var1)
     ind=find(strcmp(responsesTable.Var1{i}, summaryTable.ID)>0);
@@ -181,7 +227,7 @@ for i = 1 : numel(responsesTable.Var1)
         warning(sprintf('Subject %s not in summary.\n', responsesTable.Var1{i}));
     end
 end
-summaryTable = summaryTable(indicesSummaryWithData);
+summaryTable = summaryTable(indicesSummaryWithData,:);
 %Re estimate indices for groups:
 %group{strcmp(group, 'DUDA')} = 'COVID';
 indicesControls = find(strcmp(cbfDK.Grupo, groupNames{1}));
@@ -329,7 +375,7 @@ end
 %% LOAD COGNTIVE DATA EXCEL
 %cognitiveTestsTable = readtable(summaryExcelFilename,'Sheet','EvaluacionCognitiva', 'NumHeaderLines', 2);
 %mriReportsTable = readtable(summaryExcelFilename,'Sheet','InformeResonancia', 'NumHeaderLines', 0);
-cognitiveTable = readtable(summaryExcelFilename,'Sheet','EvaluacionCognitiva', 'Range', 'A3:AM191', 'ReadVariableNames', false, 'ReadRowNames', false);
+cognitiveTable = readtable(responseExcelFilename,'Sheet','EvaluacionCognitiva', 'Range', 'A3:AM191', 'ReadVariableNames', false, 'ReadRowNames', false);
 
 % Leave only the data of the subjects with ASL
 indicesAsl = [];
@@ -369,6 +415,33 @@ for i = 1 : size(cbfHammers_regions, 2)
     p_sex(i) = anovaTable{i}.stats.pValue(3);
     p_moca(i) = anovaTable{i}.stats.pValue(4);
     p_fas(i) = anovaTable{i}.stats.pValue(5);
+end
+
+% Identify regions with signficant p values
+indicesSign_cbfHammers = find(p < 0.05);
+% Get the names:
+disp('Regions with signifcant differences:')
+
+
+for i = 1 : numel(indicesSign_cbfHammers)
+    fprintf("Hammers. Region %s, p=%.3f, p_age=%.3f, p_sex=%.3f, p_moca=%.3f, p_fas=%.3f. Median cbf: controls=%.1f, covid=%.1f. Num NaN: %d\n", ...
+        cbfHammers.Properties.VariableNames{indexFirstRegion+indicesSign_cbfHammers(i)-1}, p(indicesSign_cbfHammers(i)), p_age(indicesSign_cbfHammers(i)), p_sex(indicesSign_cbfHammers(i)), p_moca(indicesSign_cbfHammers(i)), p_fas(indicesSign_cbfHammers(i)), ...
+        median(cbfHammers_regions(indicesControls,indicesSign_cbfHammers(i)), "omitnan"), median(cbfHammers_regions(indicesCovid, indicesSign_cbfHammers(i)), "omitnan"),...
+        sum(isnan(cbfHammers_regions(:, indicesSign_cbfHammers(i)))));
+end
+%% NOW INCLUDING SCOV AS COVARIABLE
+scovGM_b = scov.TotalGM_B;
+tbl = table(group, age_years, gender, scovGM_b, moca_perc, fas);
+for i = 1 : size(cbfHammers_regions, 2)
+    metric = cbfHammers_regions(:,i);    
+    %[p(i), table{i}, stats{i}] = anova(tbl, "metric ~ group + age + eTIV");
+    anovaTable{i} = anova(tbl, metric,categoricalFactors=["group", "gender"]);
+    p(i) = anovaTable{i}.stats.pValue(1);
+    p_age(i) = anovaTable{i}.stats.pValue(2);
+    p_sex(i) = anovaTable{i}.stats.pValue(3);
+    p_scov(i) = anovaTable{i}.stats.pValue(4);
+    p_moca(i) = anovaTable{i}.stats.pValue(5);
+    p_fas(i) = anovaTable{i}.stats.pValue(6);
 end
 
 % Identify regions with signficant p values

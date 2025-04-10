@@ -274,10 +274,10 @@ for i = 1 : numel(casesToProcess)
     fieldmapMag1DparsfPathThisSubject = [fieldmapMag1DparsfPath '/' casesToProcess{i} '/'];
     fieldmapMag2DparsfPathThisSubject = [fieldmapMag2DparsfPath '/' casesToProcess{i} '/'];
     fieldmapPhaseDparsfPathThisSubject = [fieldmapPhaseDparsfPath '/' casesToProcess{i} '/'];
-    mkdir(t1DparsfPathThisSubject);
-    copyfile([niftiPathThisSubject nameT1 niftiExtension], t1DparsfPathThisSubject);
-    mkdir(fmriDparsfPathThisSubject);
     if exist([niftiPathThisSubject namefMri niftiExtension])
+        mkdir(t1DparsfPathThisSubject);
+        copyfile([niftiPathThisSubject nameT1 niftiExtension], t1DparsfPathThisSubject);
+        mkdir(fmriDparsfPathThisSubject);
         copyfile([niftiPathThisSubject namefMri niftiExtension], fmriDparsfPathThisSubject);
         if exist([niftiPathThisSubject nameFieldmappingMag1 niftiExtension])
             mkdir(fieldmapMag1DparsfPathThisSubject);
@@ -335,7 +335,7 @@ else
 end
 %% PREPROCESSING fMRI WITH FSL
 for i = 1 : numel(casesToProcess)
-    if ~isempty(niftifMriFilenames{77})
+    if ~isempty(numel(casesToProcess))
         fslPreprocessedDataPathThisSubject = [fslPreprocessedDataPath '/' casesToProcess{i} '/fMRI/'];
         if ~isdir(fslPreprocessedDataPathThisSubject)
             mkdir(fslPreprocessedDataPathThisSubject);
