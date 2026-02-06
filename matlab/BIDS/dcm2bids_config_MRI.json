@@ -1,0 +1,161 @@
+{
+    "descriptions": [
+        {
+            "datatype": "anat",
+            "suffix": "T1w",
+            "criteria": {
+                "SeriesDescription": "t1 mprage 1x1x1*"
+            },
+            "sidecar_changes": {
+                "StudyDescription": "Long COVID Protocol",
+                "ProcedureStepDescription": "Long COVID Protocol"
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "FLAIR",
+            "criteria": {
+                "SeriesDescription": "t2_space_dark-fluid*"
+            },
+            "sidecar_changes": {
+                "StudyDescription": "Long COVID Protocol",
+                "ProcedureStepDescription": "Long COVID Protocol"
+            }
+        },
+        {
+            "id": "id_task-rest",
+            "datatype": "func",
+            "suffix": "bold",
+            "custom_entities": "task-rest",
+            "criteria": {
+                "SeriesDescription": "funcional*"
+            },
+            "sidecar_changes": {
+                "TaskName": "rest",
+                "StudyDescription": "Long COVID Protocol",
+                "ProcedureStepDescription": "Long COVID Protocol"
+            }
+        },
+        {
+            "datatype": "fmap",
+            "suffix": "magnitude1",
+            "criteria": {
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "M",
+                    "ND",
+                    "MAGNITUDE"
+                ],
+                "EchoNumber": 1
+            },
+            "sidecar_changes": {
+                "IntendedFor": [
+                    "id_task-rest"
+                ],
+                "StudyDescription": "Long COVID Protocol",
+                "ProcedureStepDescription": "Long COVID Protocol"
+            }
+        },
+        {
+            "datatype": "fmap",
+            "suffix": "magnitude1",
+            "criteria": {
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "M",
+                    "ND"
+                ],
+                "EchoNumber": 1
+            },
+            "sidecar_changes": {
+                "IntendedFor": [
+                    "id_task-rest"
+                ],
+                "StudyDescription": "Long COVID Protocol",
+                "ProcedureStepDescription": "Long COVID Protocol"
+            }
+        },
+        {
+            "datatype": "fmap",
+            "suffix": "magnitude2",
+            "criteria": {
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "M",
+                    "ND",
+                    "MAGNITUDE"
+                ],
+                "EchoNumber": 2
+            },
+            "sidecar_changes": {
+                "IntendedFor": [
+                    "id_task-rest"
+                ],
+                "StudyDescription": "Long COVID Protocol",
+                "ProcedureStepDescription": "Long COVID Protocol"
+            }
+        },
+        {
+            "datatype": "fmap",
+            "suffix": "magnitude2",
+            "criteria": {
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "M",
+                    "ND"
+                ],
+                "EchoNumber": 2
+            },
+            "sidecar_changes": {
+                "IntendedFor": [
+                    "id_task-rest"
+                ],
+                "StudyDescription": "Long COVID Protocol",
+                "ProcedureStepDescription": "Long COVID Protocol"
+            }
+        },
+        {
+            "datatype": "fmap",
+            "suffix": "phasediff",
+            "criteria": {
+                "SeriesDescription": "gre_field_mapping_2mm*",
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "P",
+                    "ND",
+                    "PHASE"
+                ]
+            },
+            "sidecar_changes": {
+                "IntendedFor": [
+                    "id_task-rest"
+                ],
+                "StudyDescription": "Long COVID Protocol",
+                "ProcedureStepDescription": "Long COVID Protocol"
+            }
+        },
+        {
+            "datatype": "perf",
+            "suffix": "asl",
+            "criteria": {
+                "SeriesDescription": "asl_3d_tra_iso_3.0*"
+            },
+            "sidecar_changes": {
+                "PostLabelingDelay": 2,
+                "BolusCutOffFlag": true,
+                "BolusCutOffTechnique": "QUIPSS-II",
+                "BolusCutOffDelayTime": 0.8,
+                "M0Type": "Absent",
+                "TotalAcquiredPairs": 10,
+                "BackgroundSuppression": true,
+                "StudyDescription": "Long COVID Protocol",
+                "ProcedureStepDescription": "Long COVID Protocol"
+            }
+        }
+    ]
+}
