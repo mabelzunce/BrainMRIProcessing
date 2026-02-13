@@ -1,0 +1,284 @@
+{
+    "descriptions": [
+        {
+            "datatype": "pet",
+            "suffix": "pet",
+            "custom_entities": "rec-acstat",
+            "criteria": {
+                "SeriesDescription": "*BR_CTAC*"
+            },
+            "sidecar_changes": {
+                "TracerName": "FDG",
+                "TracerRadionuclide": "F18",
+                "InjectedMass": "n/a",
+                "InjectedMassUnits": "n/a",
+                "SpecificRadioactivity": "n/a",
+                "SpecificRadioactivityUnits": "n/a",
+                "ModeOfAdministration": "bolus",
+                "ScanStart": 0,
+                "AcquisitionMode": "list mode",
+                "ImageDecayCorrected": true,
+                "ImageDecayCorrectionTime": 0,
+                "ReconMethodParameterUnits": [
+                    "none",
+                    "none"
+                ],
+                "ReconFilterType": "none",
+                "StudyDescription": "Long COVID PET Protocol",
+                "ProcedureStepDescription": "Long COVID PET Protocol"
+            }
+        },
+        {
+            "datatype": "pet",
+            "suffix": "pet",
+            "custom_entities": "rec-nacdyn1",
+            "criteria": {
+                "SeriesDescription": "*DY_NAC*",
+                "FrameDuration": [
+                    300,
+                    300,
+                    300,
+                    300
+                ]
+            },
+            "sidecar_changes": {
+                "TracerName": "FDG",
+                "TracerRadionuclide": "F18",
+                "InjectedMass": "n/a",
+                "InjectedMassUnits": "n/a",
+                "SpecificRadioactivity": "n/a",
+                "SpecificRadioactivityUnits": "n/a",
+                "ModeOfAdministration": "bolus",
+                "ScanStart": 0,
+                "AcquisitionMode": "list mode",
+                "ImageDecayCorrected": true,
+                "ImageDecayCorrectionTime": 0,
+                "ReconMethodParameterUnits": [
+                    "none",
+                    "none"
+                ],
+                "ReconFilterType": "none",
+                "StudyDescription": "Long COVID PET Protocol",
+                "ProcedureStepDescription": "Long COVID PET Protocol",
+                "FrameTimesStart": [
+                    0,
+                    300,
+                    600,
+                    900
+                ]
+            }
+        },
+        {
+            "datatype": "pet",
+            "suffix": "pet",
+            "custom_entities": "rec-acdyn1",
+            "criteria": {
+                "SeriesDescription": "*DY_CTAC*",
+                "FrameDuration": [
+                    300,
+                    300,
+                    300,
+                    300
+                ]
+            },
+            "sidecar_changes": {
+                "TracerName": "FDG",
+                "TracerRadionuclide": "F18",
+                "InjectedMass": "n/a",
+                "InjectedMassUnits": "n/a",
+                "SpecificRadioactivity": "n/a",
+                "SpecificRadioactivityUnits": "n/a",
+                "ModeOfAdministration": "bolus",
+                "ScanStart": 0,
+                "AcquisitionMode": "list mode",
+                "ImageDecayCorrected": true,
+                "ImageDecayCorrectionTime": 0,
+                "ReconMethodParameterUnits": [
+                    "none",
+                    "none"
+                ],
+                "ReconFilterType": "none",
+                "StudyDescription": "Long COVID PET Protocol",
+                "ProcedureStepDescription": "Long COVID PET Protocol",
+                "FrameTimesStart": [
+                    0,
+                    300,
+                    600,
+                    900
+                ]
+            }
+        },
+        {
+            "datatype": "pet",
+            "suffix": "pet",
+            "custom_entities": "rec-acdyn2",
+            "criteria": {
+                "SeriesDescription": "*DY_CTAC*",
+                "FrameDuration": [
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60
+                ]
+            },
+            "sidecar_changes": {
+                "TracerName": "FDG",
+                "TracerRadionuclide": "F18",
+                "InjectedMass": "n/a",
+                "InjectedMassUnits": "n/a",
+                "SpecificRadioactivity": "n/a",
+                "SpecificRadioactivityUnits": "n/a",
+                "ModeOfAdministration": "bolus",
+                "ScanStart": 0,
+                "AcquisitionMode": "list mode",
+                "ImageDecayCorrected": true,
+                "ImageDecayCorrectionTime": 0,
+                "ReconMethodParameterUnits": [
+                    "none",
+                    "none"
+                ],
+                "ReconFilterType": "none",
+                "StudyDescription": "Long COVID PET Protocol",
+                "ProcedureStepDescription": "Long COVID PET Protocol",
+                "FrameTimesStart": [
+                    0,
+                    60,
+                    120,
+                    180,
+                    240,
+                    300,
+                    360,
+                    420,
+                    480,
+                    540,
+                    600,
+                    660,
+                    720,
+                    780,
+                    840,
+                    900,
+                    960,
+                    1020,
+                    1080,
+                    1140
+                ]
+            }
+        },
+        {
+            "datatype": "pet",
+            "suffix": "pet",
+            "custom_entities": "rec-nacstat",
+            "criteria": {
+                "SeriesDescription": "*BR_NAC*"
+            },
+            "sidecar_changes": {
+                "TracerName": "FDG",
+                "TracerRadionuclide": "F18",
+                "InjectedMass": "n/a",
+                "InjectedMassUnits": "n/a",
+                "SpecificRadioactivity": "n/a",
+                "SpecificRadioactivityUnits": "n/a",
+                "ModeOfAdministration": "bolus",
+                "ScanStart": 0,
+                "AcquisitionMode": "list mode",
+                "ImageDecayCorrected": true,
+                "ImageDecayCorrectionTime": 0,
+                "ReconMethodParameterUnits": [
+                    "none",
+                    "none"
+                ],
+                "ReconFilterType": "none",
+                "StudyDescription": "Long COVID PET Protocol",
+                "ProcedureStepDescription": "Long COVID PET Protocol"
+            }
+        },
+        {
+            "datatype": "pet",
+            "suffix": "pet",
+            "custom_entities": "rec-nacdyn2",
+            "criteria": {
+                "SeriesDescription": "*DY_NAC*",
+                "FrameDuration": [
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60,
+                    60
+                ]
+            },
+            "sidecar_changes": {
+                "TracerName": "FDG",
+                "TracerRadionuclide": "F18",
+                "InjectedMass": "n/a",
+                "InjectedMassUnits": "n/a",
+                "SpecificRadioactivity": "n/a",
+                "SpecificRadioactivityUnits": "n/a",
+                "ModeOfAdministration": "bolus",
+                "ScanStart": 0,
+                "AcquisitionMode": "list mode",
+                "ImageDecayCorrected": true,
+                "ImageDecayCorrectionTime": 0,
+                "ReconMethodParameterUnits": [
+                    "none",
+                    "none"
+                ],
+                "ReconFilterType": "none",
+                "StudyDescription": "Long COVID PET Protocol",
+                "ProcedureStepDescription": "Long COVID PET Protocol",
+                "FrameTimesStart": [
+                    0,
+                    60,
+                    120,
+                    180,
+                    240,
+                    300,
+                    360,
+                    420,
+                    480,
+                    540,
+                    600,
+                    660,
+                    720,
+                    780,
+                    840,
+                    900,
+                    960,
+                    1020,
+                    1080,
+                    1140
+                ]
+            }
+        }
+    ]
+}

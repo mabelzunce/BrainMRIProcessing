@@ -1,0 +1,65 @@
+#!/bin/sh
+
+cd $2 || exit # Move to Processed directory
+
+# Data and Brain Templates
+data=$2/../Data
+templates=$2/../Templates/
+
+T2_orig=$1
+T2_dir=$2/T2 # T2 dir
+T1_dir=$2/T1
+[ -d "T2" ] || mkdir $T2_dir # If not exist create T2
+
+cd $T2_dir
+
+cp $T2_orig T2_FLAIR_orig.nii.gz
+
+#Take T2 to T1 and also the brain mask
+${FSLDIR}/bin/flirt -in T2_FLAIR_orig -ref ../T1/T1 -out T2_FLAIR_to_T1 -omat T2_FLAIR_to_T1.mat -dof 6
+cp ../T1/T1_brain_mask.nii.gz T2_FLAIR_brain_mask.nii.gz
+${FSLDIR}/bin/immv T2_FLAIR_to_T1 T2_FLAIR
+${FSLDIR}/bin/fslmaths T2_FLAIR -mul T2_FLAIR_brain_mask T2_FLAIR_brain
+
+#Clean and reorganize
+mkdir transforms
+mv *.mat transforms
+mv *warp*.* transforms
+
+#Apply bias field correction to T2_FLAIR warped
+if [ -f ../T1/T1_fast/T1_brain_bias.nii.gz ] ; then
+    ${FSLDIR}/bin/fslmaths T2_FLAIR.nii.gz -div ../T1/T1_fast/T1_brain_bias.nii.gz T2_FLAIR_unbiased.nii.gz
+    ${FSLDIR}/bin/fslmaths T2_FLAIR_brain.nii.gz -div ../T1/T1_fast/T1_brain_bias.nii.gz T2_FLAIR_unbiased_brain.nii.gz
+else
+    echo "WARNING: There was no bias field estimation. Bias field correction cannot be applied to T2."
+fi
+
+## Bianca
+cd $T1_dir
+
+#Create an inclusion mask with T1 --> Used to remove GM from BIANCA results
+$FSLDIR/bin/make_bianca_mask T1_unbiased.nii.gz T1_fast/T1_brain_pve_0.nii.gz transforms/T1_to_MNI_warp_coef_inv.nii.gz
+
+cd $2
+mkdir -p $T2_dir/lesions
+
+#Move the inclusion mask to T2_FLAIR/lesions directory
+mv $T1_dir/T1_unbiased_bianca_mask.nii.gz $T1_dir/T1_unbiased_ventmask.nii.gz $T1_dir/T1_unbiased_brain_mask.nii.gz $T2_dir/lesions/
+
+#Generate the configuration file to run Bianca
+echo $T1_dir/T1_unbiased_brain.nii.gz $T2_dir/T2_FLAIR_unbiased.nii.gz $T1_dir/transforms/T1_to_MNI_linear.mat > $T2_dir/lesions/conf_file.txt;
+
+#Run BIANCA
+$FSLDIR/bin/bianca --singlefile=$T2_dir/lesions/conf_file.txt --querysubjectnum=1 --brainmaskfeaturenum=1 --loadclassifierdata=$data/bianca_class_data --matfeaturenum=3 --featuresubset=1,2 -o $T2_dir/lesions/bianca_mask
+
+#Apply the inclusion mask to BIANCA output to get the final thresholded mask
+fslmaths $T2_dir/lesions/bianca_mask -mul $T2_dir/lesions/T1_unbiased_bianca_mask.nii.gz -thr 0.7 -bin $T2_dir/lesions/final_mask
+
+#Get the volume of the lesions
+fslstats $T2_dir/lesions/final_mask -V | awk '{print $1}' > $T2_dir/lesions/volume.txt
+
+# Total Volume and number of clusters
+bianca_cluster_stats $T2_dir/lesions/final_mask.nii.gz 0 10 > $T2_dir/lesions/volume_cluster_10.txt
+bianca_cluster_stats $T2_dir/lesions/final_mask.nii.gz 0 5 > $T2_dir/lesions/volume_cluster_7.txt
+bianca_cluster_stats $T2_dir/lesions/final_mask.nii.gz 0 7 > $T2_dir/lesions/volume_cluster_5.txt
+bianca_cluster_stats $T2_dir/lesions/final_mask.nii.gz 0 3 > $T2_dir/lesions/volume_cluster_3.txt
