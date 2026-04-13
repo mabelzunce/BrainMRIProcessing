@@ -10,10 +10,9 @@ addpath([dataPartitionPath 'UNSAM/Brain/spm12/spm12/'])
 addpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/DPARSF/'])
 addpath('../fMRI/')
 %% DATA PATHS
-dataPath = [imagingPartitionPath '/CovidProject/Estudio/PreprocessedMRI/DPARSF/'];
-roiSignalsPath = [dataPath '/ResultsAAL/ROISignals_FunImgARWSDCFN/'];
-% Subjects data:
-studyDataPath = [dataPartitionPath '/UNSAM/CovidProject2/'];
+dataPath = [imagingPartitionPath '/CovidProject/FullStudy/fMRI/'];
+roiSignalsPath = [dataPath '/ResultsAAL3/ROISignals_FunImgARWSDCFN/'];
+studyDataPath = [dataPartitionPath '/UNSAM/CovidProject/FullStudy/'];
 resultsPath = '../DataAnalysis/';
 summaryExcelFilename = fullfile(studyDataPath, 'Respuestas.xlsx');
 outputPath = [dataPartitionPath '/CovidProject/Estudio/fMRIAnalyisis/RMT/'];

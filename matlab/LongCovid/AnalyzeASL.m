@@ -69,7 +69,7 @@ colFAS = 75;
 %% SUBJECTS TO EXCLUDE:
 excludeVascular = 0;
 % Apply some filters for unwanted volunteers:
-subjectsToExclude = {'CP0011', 'CP0015','CP0087'}; % 11 (foreign language) and 15 (elder and probaly with some form of dementia). Remove empty names.
+subjectsToExclude = {'CP0011', 'CP0015','CP0087','CP0193'}; % 11 (foreign language) and 15 (elder and probaly with some form of dementia). Remove empty names.
 % subjects to exclude because of artefacts or problems with the images:
 subjectsToExcludeAsl = {'CP0015', 'CP0075', 'CP0076','CP0078', 'CP0079', 'CP0062', 'CP0105', 'CP0216'};
 subjectsToExcludeAsl = {'CP0015', 'CP0035', 'CP0075', 'CP0076','CP0078', 'CP0079', 'CP0062', 'CP0105', 'CP0216',...
@@ -403,8 +403,11 @@ allCognitiveTests_score = table2array(cognitiveMatchedTable(:,3:3:29));
 allCognitiveTests_perc = table2array(cognitiveMatchedTable(:,4:3:29));
 allCognitiveTests_perf = table2array(cognitiveMatchedTable(:,5:3:29));
 
-%% ANCOVA
+% Individual tests:
 moca_perc = allCognitiveTests_perc(:,end);
+tmtA_perc = allCognitiveTests_perc(:,1);
+%% ANCOVA
+
 tbl = table(group, age_years, gender, moca_perc, fas);
 for i = 1 : size(cbfHammers_regions, 2)
     metric = cbfHammers_regions(:,i);    
@@ -466,7 +469,7 @@ end
 writetable(tbl, fullfile(outputPath, 'AncovaSignificant.csv'))
 
 %% TABLE TO EXPLORE MACHINE LEARNING METHODS
-tbl = table(group, age_years, gender, moca_perc, fas);
+tbl = table(group, age_years, gender, moca_perc, fas, tmtA_perc);
 %allCognitiveTests_perc);
 %% READ 4D IMAGE
 imageAllAsl = niftiread(aslAllImagesFilename);
@@ -524,25 +527,7 @@ niftiwrite(stdCbfImageControls, fullfile(aslImagesPath, 'stdCbfImageControls.nii
 niftiwrite(stdCbfImageCovid, fullfile(aslImagesPath, 'stdCbfImageCovid.nii'), imageInfo, 'Compressed', 1);
 niftiwrite(medianCbfImageControls, fullfile(aslImagesPath, 'medianCbfImageControls.nii'), imageInfo, 'Compressed', 1);
 niftiwrite(medianCbfImageCovid, fullfile(aslImagesPath, 'medianCbfImageCovid.nii'), imageInfo, 'Compressed', 1);
-%% BOXPLOTS FOR HAMMERS
-% Concatenate data from both groups
-cbf_all = [meanRoisHammersControls; meanRoisHammersCovid];  % Matrix ((N1 + N2) x M)
 
-% Create group labels
-group_labels = [repmat({'CONTROLS'}, size(meanRoisHammersControls, 1), 1); repmat({'COVID'}, size(meanRoisHammersCovid, 1), 1)];
-
-% Create ROI labels
-num_rois = size(cbf_all, 2);
-roi_labels = repmat(1:num_rois, size(cbf_all, 1), 1);
-roi_labels = roi_labels(:);  % Vectorize for boxplot
-
-% Reshape data and group labels to match the boxplot input format
-%cbf_all = cbf_all(:);  % Convert matrix to column vector
-%group_labels = repmat(group_labels, num_rois, 1);  % Repeat group labels for each ROI
-
-figure; subplot(1,3,1);boxchart(categorical(group_labels), cbf_all(:,85))
-subplot(1,3,2);boxchart(categorical(group_labels), cbf_all(:,12))
-subplot(1,3,3);boxchart(categorical(group_labels), cbf_all(:,33))
 %% LOAD ATLASES
 mni152 = niftiread('/usr/local/fsl/data/standard/MNI152_T1_1mm.nii.gz');
 mni152_info = niftiread('/usr/local/fsl/data/standard/MNI152_T1_1mm.nii.gz');
@@ -563,6 +548,7 @@ niftiwrite(uint8(mni152_gm), fullfile(aslImagesPath, 'mni152_gm_resampled.nii'),
 %% GET IMAGES FOR HAMMERS ATLASES
 meanHammersCovid = zeros(size(hammers_gm));
 meanHammersControls = zeros(size(hammers_gm));
+mad(X,1)
 labels = unique(hammers_gm);
 for i = 1 : numel(labels)
     label = labels(i);
@@ -595,7 +581,178 @@ niftiwrite(single(meanHammersControls), fullfile(aslImagesPath, 'meanHammersCont
 niftiwrite(single(meanHammersCovid), fullfile(aslImagesPath, 'meanHammersCovid.nii'), imageInfo, 'Compressed', 1);
 writetable(tableControls, fullfile(aslImagesPath, 'meanRoisHammersControls.csv'))
 writetable(tableCovid, fullfile(aslImagesPath, 'meanRoisHammersCovid.csv'))
+%% COMPUTE ADVANCED METRICS
+meanRoisHammers = zeros(size(imageAllAsl, 4), numel(labels));
+stdRoisHammers = zeros(size(imageAllAsl, 4), numel(labels));
+covRoisHammers = zeros(size(imageAllAsl, 4), numel(labels));
+madRoisHammers = zeros(size(imageAllAsl, 4), numel(labels)); % median absolute deviation
+skewnessRoisHammers = zeros(size(imageAllAsl, 4), numel(labels));
+kurtosisRoisHammers = zeros(size(imageAllAsl, 4), numel(labels));
+outlierFractionRoisHammers = zeros(size(imageAllAsl, 4), numel(labels));
+for i = 1 : numel(labels)
+    label = labels(i);
+    voxelsRoi = find(hammers_gm==label);
+    for j = 1 : size(imageAllAsl, 4)
+        thisImage = imageAllAsl(:,:,:,j);
+        cbfVoxelsRoi = thisImage(voxelsRoi);
+        meanRoisHammers(j,i) = mean(cbfVoxelsRoi);
+        stdRoisHammers(j,i) = std(cbfVoxelsRoi);
+        covRoisHammers(j,i) = stdRoisHammers(j,i)./meanRoisHammers(j,i);
+        madRoisHammers(j,i) = mad(cbfVoxelsRoi, 1); % 1 for median
+        skewnessRoisHammers(j,i) = skewness(cbfVoxelsRoi,1,'all');
+        kurtosisRoisHammers(j,i) = kurtosis(cbfVoxelsRoi,1,'all');
+        % Outlier fraction (> mu + 2*std)
+        outlierThresh(i,j) = meanRoisHammers(j,i) + 2 * stdRoisHammers(j,i);
+        outlierFractionRoisHammers(j,i) = sum(cbfVoxelsRoi > outlierThresh(i,j)) / numel(cbfVoxelsRoi); 
+    end
+end
+%% BOXPLOTS FOR EACH METRIC
+labelsForBoxchart = repmat(labels', size(meanRoisHammers, 1), 1);
+figure; 
+set(gcf, 'Position', [100 100 3200 2400])
+boxchart( categorical(labelsForBoxchart(:)), covRoisHammers(:), 'GroupByColor', repmat(group, numel(labels),1))
+ylim([0 4])
 
+figure; 
+set(gcf, 'Position', [100 100 3200 2400])
+boxchart( categorical(labelsForBoxchart(:)), madRoisHammers(:), 'GroupByColor', repmat(group, numel(labels),1))
+ylim([0 20])
+%% COMPUTE ADVANCED METRICS BY LOBULE
+indicesLobules{1} = [1 : 16, 30, 31, 82, 83]; % temporal; frontal; insula
+indicesLobules{2} = [28,29, 50:59, 68:73, 76:81];
+indicesLobules{3} = [20, 21, 86:95];
+nameLobules = {'Temporal', 'Frontal', 'Insula'};
+meanLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules));
+stdLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules));
+covLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules));
+madLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules)); % median absolute deviation
+skewnessLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules));
+kurtosisLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules));
+entropyLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules));
+outlierFractionLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules));
+pRatioLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules));
+contrastLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules));
+homogeneityLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules));
+energyLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules));
+corrLobulesHammers = zeros(size(imageAllAsl, 4), numel(indicesLobules));
+for i = 1 : numel(indicesLobules)
+    % Get all the voxels for each lobule
+    voxelsLobule = [];
+    for l = 1 : numel(indicesLobules{i})
+        label = indicesLobules{i}(l);
+        voxelsLobule = [voxelsLobule; find(hammers_gm==label)];
+    end
+    for j = 1 : size(imageAllAsl, 4)
+        thisImage = imageAllAsl(:,:,:,j);
+        cbfVoxelsLobule = thisImage(voxelsLobule);
+        meanLobulesHammers(j,i) = mean(cbfVoxelsLobule);
+        stdLobulesHammers(j,i) = std(cbfVoxelsLobule);
+        covLobulesHammers(j,i) = stdLobulesHammers(j,i)./meanLobulesHammers(j,i);
+        madLobulesHammers(j,i) = mad(cbfVoxelsLobule, 1); % 1 for median
+        skewnessLobulesHammers(j,i) = skewness(cbfVoxelsLobule,1,'all');
+        kurtosisLobulesHammers(j,i) = kurtosis(cbfVoxelsLobule,1,'all');
+        entropyLobulesHammers(j,i) = entropy(double(cbfVoxelsLobule));
+        % Outlier fraction (> mu + 2*std)
+        outlierThresh(j,i) = meanLobulesHammers(j,i) + 2 * stdLobulesHammers(j,i);
+        outlierFractionLobulesHammers(j,i) = sum(cbfVoxelsLobule > outlierThresh(j,i)) / numel(cbfVoxelsLobule); 
+        % % Percentile ratios
+        p95 = prctile(cbfVoxelsLobule, 95);
+        p99 = prctile(cbfVoxelsLobule, 99);
+        pRatioLobulesHammers(j,i) = p95 / meanLobulesHammers(j,i);
+        % Second order stats, I need spatial information:
+        % Step 1: Find ROI bounding box
+        [x, y, z] = ind2sub(size(hammers_gm), voxelsLobule);
+        min_x = min(x); max_x = max(x);
+        min_y = min(y); max_y = max(y);
+        min_z = min(z); max_z = max(z);
+        % Step 2: Extract cube
+        auxImage = zeros(size(thisImage));
+        auxImage(voxelsLobule) = thisImage(voxelsLobule);
+        cbfCube = auxImage(min_x:max_x, min_y:max_y, min_z:max_z);
+        % Step 3: Apply mask to retain only ROI values
+        cbfCube = rescale(cbfCube, 0, 255); % Rescale
+        cbfCube = uint8(cbfCube);       
+        % Create GLCM
+        % glcmAcc = zeros(8);
+        % %glcm = graycomatrix(cbfCube, 'Offset', [0 1]); % Horizontal
+        % for z = 1:size(cbfCube, 3)
+        %     slice = cbfCube(:, :, z);
+        %     if nnz(slice) > 0
+        %         % Discretize to 8-bit (0–255) or fewer bins
+        %         slice = uint8(rescale(slice, 0, 255));
+        % 
+        %         % Compute GLCM for current slice
+        %         glcm = graycomatrix(slice, 'Symmetric', true);
+        %         glcmAcc = glcmAcc + glcm;
+        %     end
+        % end
+        [glcmAcc,SI] = graycomatrix3D(cbfCube, 'NumLevels', 16);
+        stats = graycoprops(glcmAcc, {'Contrast', 'Correlation', 'Homogeneity', 'Energy'});
+        contrastLobulesHammers(j,i) = stats.Contrast;
+        corrLobulesHammers(j,i) = stats.Correlation;
+        energyLobulesHammers(j,i) = stats.Energy;
+        homogeneityLobulesHammers(j,i) = stats.Homogeneity;
+    end
+end
+%% BOXPLOTS FOR EACH METRIC AND LOBULE
+labelsForBoxchart = repmat(categorical(nameLobules)', size(meanRoisHammers, 1), 1);
+figure; 
+set(gcf, 'Position', [100 100 3200 2400])
+tiledlayout(3,4);
+nexttile;
+boxchart( labelsForBoxchart, covLobulesHammers(:), 'GroupByColor', repmat(group, numel(nameLobules),1))
+title('sCOV')
+legend
+nexttile;
+boxchart( labelsForBoxchart, madLobulesHammers(:), 'GroupByColor', repmat(group, numel(nameLobules),1))
+title('sMAD (Median Absolute Deviation)');
+nexttile;
+boxchart( labelsForBoxchart, skewnessLobulesHammers(:), 'GroupByColor', repmat(group, numel(nameLobules),1))
+title('sSkewness');
+nexttile;
+boxchart( labelsForBoxchart, kurtosisLobulesHammers(:), 'GroupByColor', repmat(group, numel(nameLobules),1))
+title('sKurtosis');
+ylim([0 20])
+nexttile;
+boxchart( labelsForBoxchart, entropyLobulesHammers(:), 'GroupByColor', repmat(group, numel(nameLobules),1))
+title('sEntropy');
+nexttile;
+boxchart( labelsForBoxchart, outlierFractionLobulesHammers(:), 'GroupByColor', repmat(group, numel(nameLobules),1))
+title('sOF (Outliers Fraction)');
+nexttile;
+boxchart( labelsForBoxchart, pRatioLobulesHammers(:), 'GroupByColor', repmat(group, numel(nameLobules),1))
+title('pRatio');
+nexttile;
+boxchart( labelsForBoxchart, contrastLobulesHammers(:), 'GroupByColor', repmat(group, numel(nameLobules),1))
+title('Contrast');
+nexttile;
+boxchart( labelsForBoxchart, corrLobulesHammers(:), 'GroupByColor', repmat(group, numel(nameLobules),1))
+title('Correlation');
+nexttile;
+boxchart( labelsForBoxchart, energyLobulesHammers(:), 'GroupByColor', repmat(group, numel(nameLobules),1))
+title('Energy');
+nexttile;
+boxchart( labelsForBoxchart, homogeneityLobulesHammers(:), 'GroupByColor', repmat(group, numel(nameLobules),1))
+title('Homogeneity');
+%% BOXPLOTS FOR HAMMERS
+% Concatenate data from both groups
+cbf_all = [meanRoisHammersControls; meanRoisHammersCovid];  % Matrix ((N1 + N2) x M)
+
+% Create group labels
+group_labels = [repmat({'CONTROLS'}, size(meanRoisHammersControls, 1), 1); repmat({'COVID'}, size(meanRoisHammersCovid, 1), 1)];
+
+% Create ROI labels
+num_rois = size(cbf_all, 2);
+roi_labels = repmat(1:num_rois, size(cbf_all, 1), 1);
+roi_labels = roi_labels(:);  % Vectorize for boxplot
+
+% Reshape data and group labels to match the boxplot input format
+%cbf_all = cbf_all(:);  % Convert matrix to column vector
+%group_labels = repmat(group_labels, num_rois, 1);  % Repeat group labels for each ROI
+
+figure; subplot(1,3,1);boxchart(categorical(group_labels), cbf_all(:,85))
+subplot(1,3,2);boxchart(categorical(group_labels), cbf_all(:,12))
+subplot(1,3,3);boxchart(categorical(group_labels), cbf_all(:,33))
 %% PROCESS INDIVIDUAL IMAGES FROM EXPLORE ASL USING MASK
 pathPopulationAnalysis = '/media/martin/PortableSSD/ASLDirSol/BIDS/derivatives/ExploreASL/Population/';
 

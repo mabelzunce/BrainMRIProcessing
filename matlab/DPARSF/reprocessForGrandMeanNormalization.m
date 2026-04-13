@@ -66,7 +66,7 @@ fmriSubjects = {fmriSubjects(3:end).name};
 % MAtrix to store all the data:
 SignalsAllSubjects = {};
 % Iterate over each preprocessed fMRI file
-for i = 1 : numel(fmriSubjects)
+for i = 1 : 10%numel(fmriSubjects)
     % Read the fMRI data
     niftiFilename = dir(fullfile(preprocessedDataPath, fmriSubjects{i}, '*.nii'));
     outputFilename = fullfile(dataPath, outputNormalizedImageSubdir, fmriSubjects{i}, preprocessedImageFilenames);

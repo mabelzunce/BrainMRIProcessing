@@ -14,13 +14,13 @@ addpath([dataPartitionPath 'UNSAM/Brain/spm12/spm12/'])
 addpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/DPARSF/'])
 addpath(genpath('../'))
 %% PREPROCESSED DATA PATH
-dataPath = [imagingPartitionPath '/CovidProject/Estudio/PreprocessedMRI/DPARSF/'];
+dataPath = [imagingPartitionPath '/CovidProject/FullStudy/fMRI/'];
 preprocessedFolder = 'FunImgARWSDCFN';%'FunImgARWSDCFN';
 preprocessedDataPath = fullfile(dataPath, preprocessedFolder);
 indexScanner = 1; % Siemens=1, GE=2, Philips=3.
 
 %% OUTPUTPATH
-atlasName = 'Schaefer2018_1000Parcels_17Networks';%'Schaefer2018_1000Parcels_17Networks';
+atlasName = 'AAL3';%'Schaefer2018_1000Parcels_17Networks';
 suffixROIFilenames = 'ROISignals_';
 outputPath = fullfile(dataPath, ['Results' atlasName]);
 outputPathSignals = fullfile(outputPath, ['ROISignals_' preprocessedFolder]);
@@ -47,7 +47,58 @@ if strcmp(atlasName, 'Schaefer2018_1000Parcels_17Networks')
     tableCmap = readtable(filenameAtlasColormap);
     atlasColormap = [tableCmap.Var3 tableCmap.Var4 tableCmap.Var5];
     atlasColormap = atlasColormap./255;
-elseif strcmp(atlasName, 'AAL')
+elseif strcmp(atlasName, 'Schaefer2018_400Parcels_17Networks')
+    % Schaefer Parcelation
+    filenameAtlasNifti =  fullfile(atlasPAth, 'Schaefer2018_400Parcels_17Networks_order_FSLMNI152_2mm.nii.gz');
+    filenameAtlasRois =  fullfile(atlasPAth, 'Schaefer2018_400Parcels_17Networks_order_FSLMNI152_2mm.Centroid_RAS.csv');
+    filenameAtlasColormap = fullfile(atlasPAth, 'Schaefer2018_400Parcels_Kong2022_17Networks_order.txt');
+    % read atlas volume:
+    atlasVolume = niftiread(filenameAtlasNifti);
+    atlasRois = readtable(filenameAtlasRois);
+    % las coords x y z de cada ROI en MNI space:
+    coordsRois = [atlasRois.R atlasRois.A atlasRois.S];
+    % Compute the ROIs ids:
+    roisIds = atlasRois.ROILabel;
+    numLabels = numel(roisIds);
+    % Colormaps
+    tableCmap = readtable(filenameAtlasColormap);
+    atlasColormap = [tableCmap.Var3 tableCmap.Var4 tableCmap.Var5];
+    atlasColormap = atlasColormap./255;
+elseif strcmp(atlasName, 'Schaefer2018_200Parcels_17Networks')
+    % Schaefer Parcelation
+    filenameAtlasNifti =  fullfile(atlasPAth, 'Schaefer2018_200Parcels_17Networks_order_FSLMNI152_2mm.nii.gz');
+    filenameAtlasRois =  fullfile(atlasPAth, 'Schaefer2018_200Parcels_17Networks_order_FSLMNI152_2mm.Centroid_RAS.csv');
+    filenameAtlasColormap = fullfile(atlasPAth, 'Schaefer2018_200Parcels_Kong2022_17Networks_order.txt');
+    % read atlas volume:
+    atlasVolume = niftiread(filenameAtlasNifti);
+    atlasRois = readtable(filenameAtlasRois);
+    % las coords x y z de cada ROI en MNI space:
+    coordsRois = [atlasRois.R atlasRois.A atlasRois.S];
+    % Compute the ROIs ids:
+    roisIds = atlasRois.ROILabel;
+    numLabels = numel(roisIds);
+    % Colormaps
+    tableCmap = readtable(filenameAtlasColormap);
+    atlasColormap = [tableCmap.Var3 tableCmap.Var4 tableCmap.Var5];
+    atlasColormap = atlasColormap./255;
+elseif strcmp(atlasName, 'Schaefer2018_100Parcels_17Networks')
+    % Schaefer Parcelation
+    filenameAtlasNifti =  fullfile(atlasPAth, 'Schaefer2018_100Parcels_17Networks_order_FSLMNI152_2mm.nii.gz');
+    filenameAtlasRois =  fullfile(atlasPAth, 'Schaefer2018_100Parcels_17Networks_order_FSLMNI152_2mm.Centroid_RAS.csv');
+    filenameAtlasColormap = fullfile(atlasPAth, 'Schaefer2018_100Parcels_Kong2022_17Networks_order.txt');
+    % read atlas volume:
+    atlasVolume = niftiread(filenameAtlasNifti);
+    atlasRois = readtable(filenameAtlasRois);
+    % las coords x y z de cada ROI en MNI space:
+    coordsRois = [atlasRois.R atlasRois.A atlasRois.S];
+    % Compute the ROIs ids:
+    roisIds = atlasRois.ROILabel;
+    numLabels = numel(roisIds);
+    % Colormaps
+    tableCmap = readtable(filenameAtlasColormap);
+    atlasColormap = [tableCmap.Var3 tableCmap.Var4 tableCmap.Var5];
+    atlasColormap = atlasColormap./255;
+elseif strcmp(atlasName, 'AAL3')
     % AAL Parcelation
     filenameAtlasNifti =  fullfile(atlasPAth, 'AAL3', 'AAL3v1.nii.gz');
     filenameAtlasRois =  fullfile(atlasPAth, 'AAL3', 'AAL3v1.nii.txt');
@@ -71,7 +122,7 @@ schaeferSignalsAllSubjects = {};
 % Iterate over each preprocessed fMRI file
 for i = 1 : numel(fmriSubjects)
     % Read the fMRI data
-    niftiFilename = dir(fullfile(preprocessedDataPath, fmriSubjects(i).name, '*.nii'));
+    niftiFilename = dir(fullfile(preprocessedDataPath, fmriSubjects(i).name, '*.nii*'));
     fmriVolume = niftiread(fullfile(preprocessedDataPath, fmriSubjects(i).name, niftiFilename.name));
     fmriInfo = niftiinfo(fullfile(preprocessedDataPath, fmriSubjects(i).name, niftiFilename.name));
     

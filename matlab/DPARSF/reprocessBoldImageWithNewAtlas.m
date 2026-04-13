@@ -19,12 +19,14 @@ dataPath = '/home/martin/data_imaging/CovidProject/Estudio/PreprocessedMRI/DPARS
 dataPath = '/home/martin/data_imaging/ADNIdata/fMRI_ADNI2_ADNI3_initial_visit/';
 adniCollectionFullFilename = '/home/martin/data/UNSAM/CEMSC3/ProcesamientoADNI/DataBase/fMRI_screening_initalvisit/fMRI_screening_initalvisit_2023_04_27.csv';
 adniMergeFullFilename = '/home/martin/data_imaging/ADNIdata/StudyInfo/Study_Info/ADNIMERGE_12Jul2023.csv';
-preprocessedFolder = 'NiftiPreprocessedAllBatches';%'FunImgARWSDCFN';
+preprocessedFolder = 'NiftiPreprocessedAllBatches';%
+% 
+% 'FunImgARWSDCFN';
 preprocessedDataPath = fullfile(dataPath, preprocessedFolder);
 indexScanner = 1; % Siemens=1, GE=2, Philips=3.
-
+subjectsToExclude = {'114_S_6039', '035_S_6953', '128_S_2002', '031_S_4021', '130_S_5231', '130_S_6647'};
 %% OUTPUTPATH
-atlasName = 'AAL';%'Schaefer2018_1000Parcels_17Networks';
+atlasName = 'Schaefer2018_400Parcels_17Networks';%'Schaefer2018_200Parcels_17Networks';%'AAL';%'Schaefer2018_1000Parcels_17Networks','Schaefer2018_400Parcels_17Networks', 'Schaefer2018_100Parcels_17Networks';
 suffixROIFilenames = 'ROISignals_';
 outputPath = fullfile(dataPath, ['Results' atlasName]);
 outputPathSignals = fullfile(outputPath, ['ROISignals_' atlasName '_' preprocessedFolder]);
@@ -51,7 +53,58 @@ if strcmp(atlasName, 'Schaefer2018_1000Parcels_17Networks')
     tableCmap = readtable(filenameAtlasColormap);
     atlasColormap = [tableCmap.Var3 tableCmap.Var4 tableCmap.Var5];
     atlasColormap = atlasColormap./255;
-elseif strcmp(atlasName, 'AAL')
+elseif strcmp(atlasName, 'Schaefer2018_400Parcels_17Networks')
+    % Schaefer Parcelation
+    filenameAtlasNifti =  fullfile(atlasPAth, 'Schaefer2018_400Parcels_17Networks_order_FSLMNI152_2mm.nii.gz');
+    filenameAtlasRois =  fullfile(atlasPAth, 'Schaefer2018_400Parcels_17Networks_order_FSLMNI152_2mm.Centroid_RAS.csv');
+    filenameAtlasColormap = fullfile(atlasPAth, 'Schaefer2018_400Parcels_Kong2022_17Networks_order.txt');
+    % read atlas volume:
+    atlasVolume = niftiread(filenameAtlasNifti);
+    atlasRois = readtable(filenameAtlasRois);
+    % las coords x y z de cada ROI en MNI space:
+    coordsRois = [atlasRois.R atlasRois.A atlasRois.S];
+    % Compute the ROIs ids:
+    roisIds = atlasRois.ROILabel;
+    numLabels = numel(roisIds);
+    % Colormaps
+    tableCmap = readtable(filenameAtlasColormap);
+    atlasColormap = [tableCmap.Var3 tableCmap.Var4 tableCmap.Var5];
+    atlasColormap = atlasColormap./255;
+elseif strcmp(atlasName, 'Schaefer2018_200Parcels_17Networks')
+    % Schaefer Parcelation
+    filenameAtlasNifti =  fullfile(atlasPAth, 'Schaefer2018_200Parcels_17Networks_order_FSLMNI152_2mm.nii.gz');
+    filenameAtlasRois =  fullfile(atlasPAth, 'Schaefer2018_200Parcels_17Networks_order_FSLMNI152_2mm.Centroid_RAS.csv');
+    filenameAtlasColormap = fullfile(atlasPAth, 'Schaefer2018_200Parcels_Kong2022_17Networks_order.txt');
+    % read atlas volume:
+    atlasVolume = niftiread(filenameAtlasNifti);
+    atlasRois = readtable(filenameAtlasRois);
+    % las coords x y z de cada ROI en MNI space:
+    coordsRois = [atlasRois.R atlasRois.A atlasRois.S];
+    % Compute the ROIs ids:
+    roisIds = atlasRois.ROILabel;
+    numLabels = numel(roisIds);
+    % Colormaps
+    tableCmap = readtable(filenameAtlasColormap);
+    atlasColormap = [tableCmap.Var3 tableCmap.Var4 tableCmap.Var5];
+    atlasColormap = atlasColormap./255;
+elseif strcmp(atlasName, 'Schaefer2018_100Parcels_17Networks')
+    % Schaefer Parcelation
+    filenameAtlasNifti =  fullfile(atlasPAth, 'Schaefer2018_100Parcels_17Networks_order_FSLMNI152_2mm.nii.gz');
+    filenameAtlasRois =  fullfile(atlasPAth, 'Schaefer2018_100Parcels_17Networks_order_FSLMNI152_2mm.Centroid_RAS.csv');
+    filenameAtlasColormap = fullfile(atlasPAth, 'Schaefer2018_100Parcels_Kong2022_17Networks_order.txt');
+    % read atlas volume:
+    atlasVolume = niftiread(filenameAtlasNifti);
+    atlasRois = readtable(filenameAtlasRois);
+    % las coords x y z de cada ROI en MNI space:
+    coordsRois = [atlasRois.R atlasRois.A atlasRois.S];
+    % Compute the ROIs ids:
+    roisIds = atlasRois.ROILabel;
+    numLabels = numel(roisIds);
+    % Colormaps
+    tableCmap = readtable(filenameAtlasColormap);
+    atlasColormap = [tableCmap.Var3 tableCmap.Var4 tableCmap.Var5];
+    atlasColormap = atlasColormap./255;
+elseif strcmp(atlasName, 'AAL3')
     % AAL Parcelation
     filenameAtlasNifti =  fullfile(atlasPAth, 'AAL3', 'AAL3v1.nii.gz');
     filenameAtlasRois =  fullfile(atlasPAth, 'AAL3', 'AAL3v1.nii.txt');
@@ -70,6 +123,16 @@ fmriSubjects = dir(preprocessedDataPath);
 fmriSubjects = fmriSubjects([fmriSubjects(:).isdir]);
 % Remove the first two (.,..)
 fmriSubjects = fmriSubjects(3:end);
+% Remove subjects to exclude:
+indicesToExclude = [];
+for i = 1 : numel(subjectsToExclude)
+    ind=find(strcmp(subjectsToExclude{i}, {fmriSubjects(:).name})>0);
+    if ~isempty(ind)
+       indicesToExclude = [indicesToExclude ind(1)];
+    end
+end
+fmriSubjects(indicesToExclude) = [];
+
 % MAtrix to store all the data:
 schaeferSignalsAllSubjects = {};
 % Iterate over each preprocessed fMRI file
@@ -249,16 +312,21 @@ for i = 1 : numel(fmriSubjects)
     infoProcessedData(i,:) = infoThisImage;
     adniCollectionData(indexSubjectInCollection,:) = infoThisImage;
 end
-writetable(infoProcessedData, fullfile(dataPath, 'SubjctsDataAndTests.csv'))
+writetable(infoProcessedData, fullfile(dataPath, ['SubjctsDataAndTests' atlasName '.csv']))
 [path, filenameCollection, ext] = fileparts(adniCollectionFullFilename);
 fullFilenameCollectionExtended = fullfile(path, [filenameCollection '_extended' ext]);
 writetable(adniCollectionData, fullFilenameCollectionExtended);
 %% STATS OF EACH CASE
 [values, channels] = hist(categorical(infoProcessedData.ResearchGroup));
 [valuesCollection, channelsCollection] = hist(categorical(adniCollectionData.ResearchGroup));
-%% CHECK THE IMAGES
+%% CHECK THE SIGNALS
 for i = 1 : numel(fmriSubjects)
     signals = load(fullfile(outputPathSignals, [suffixROIFilenames fmriSubjects(i).name '.mat']));
     fig = check_fMRI_bold_signals(signals.signals);
     close all
+end
+%% CHECK THE SIGNALS
+for i = 1 : numel(fmriSubjects)
+    signals = load(fullfile(outputPathSignals, [suffixROIFilenames fmriSubjects(i).name '.mat']));
+    sizeSignals(:,i) = size(signals.signals);
 end
