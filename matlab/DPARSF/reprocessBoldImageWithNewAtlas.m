@@ -16,17 +16,18 @@ addpath(genpath('../'))
 %% PREPROCESSED DATA PATH
 dataPath = '/home/martin/data_imaging/ADNIdata/fMRI_first_batch_to_process_2023_04_27/Procesadas_2mm_highpass/';
 dataPath = '/home/martin/data_imaging/CovidProject/Estudio/PreprocessedMRI/DPARSF/';
-dataPath = '/home/martin/data_imaging/ADNIdata/fMRI_ADNI2_ADNI3_initial_visit/';
-adniCollectionFullFilename = '/home/martin/data/UNSAM/CEMSC3/ProcesamientoADNI/DataBase/fMRI_screening_initalvisit/fMRI_screening_initalvisit_2023_04_27.csv';
+dataPath = '/home/martin/data_imaging/ADNIdata/RevisionPaperfMRI_2026_04/FourthBatch/Processed/DPARSF/GE/';
+dataPath = '/home/martin/data_imaging/OASIS/second_batch/OASIS_next_60CN_60AD_2026_05_26_RAW_DATA_120of120-001/OASIS_next_60CN_60AD_2026_05_26_processed/DPARSF/';
+adniCollectionFullFilename = '/home/martin/data_imaging/ADNIdata/RevisionPaperfMRI_2026_04/RevisionPaperfMRI_2026_04_4_06_2026.csv';
 adniMergeFullFilename = '/home/martin/data_imaging/ADNIdata/StudyInfo/Study_Info/ADNIMERGE_12Jul2023.csv';
-preprocessedFolder = 'NiftiPreprocessedAllBatches';%
+preprocessedFolder = 'FunImgARWSDCFN';%
 % 
 % 'FunImgARWSDCFN';
 preprocessedDataPath = fullfile(dataPath, preprocessedFolder);
 indexScanner = 1; % Siemens=1, GE=2, Philips=3.
-subjectsToExclude = {'114_S_6039', '035_S_6953', '128_S_2002', '031_S_4021', '130_S_5231', '130_S_6647'};
+subjectsToExclude = {};
 %% OUTPUTPATH
-atlasName = 'Schaefer2018_400Parcels_17Networks';%'Schaefer2018_200Parcels_17Networks';%'AAL';%'Schaefer2018_1000Parcels_17Networks','Schaefer2018_400Parcels_17Networks', 'Schaefer2018_100Parcels_17Networks';
+atlasName = 'AAL3';%'Schaefer2018_200Parcels_17Networks';%'AAL';%'Schaefer2018_1000Parcels_17Networks','Schaefer2018_400Parcels_17Networks', 'Schaefer2018_100Parcels_17Networks';
 suffixROIFilenames = 'ROISignals_';
 outputPath = fullfile(dataPath, ['Results' atlasName]);
 outputPathSignals = fullfile(outputPath, ['ROISignals_' atlasName '_' preprocessedFolder]);
@@ -195,7 +196,7 @@ adniCollectionData.PTAU = NaN(size(adniCollectionData,1), 1);
 adniMergeData = readtable(adniMergeFullFilename);
 for i = 1 : numel(fmriSubjects)
     % It should appear only once in this data collection.
-    indexSubjectInCollection = find(strcmp(fmriSubjects(i).name, adniCollectionData.SubjectID)>0);
+    indexSubjectInCollection = find(strcmp(fmriSubjects(i).name, adniCollectionData.Subject)>0);
     % If more than one, use the last one (assumes that they are all from
     % the same visit):
     indexSubjectInCollection = indexSubjectInCollection(end);
@@ -212,19 +213,19 @@ for i = 1 : numel(fmriSubjects)
             % Not all the fields have data for every date, look for the closer
             % date for each field.
             indicesNotNan = find(~isnan(adniMergeData(indexMerge,:).PTEDUCAT));
-            [minValue, indexMin] = min(abs(infoThisImage.StudyDate - dateTimeMerge(indicesNotNan)));
+            [minValue, indexMin] = min(abs(infoThisImage.AcqDate - dateTimeMerge(indicesNotNan)));
             infoThisImage.PTEDUCAT = adniMergeData(indexMerge(indexMin),:).PTEDUCAT;
     
             indicesNotNan = find(~isnan(adniMergeData(indexMerge,:).CDRSB));
-            [minValue, indexMin] = min(abs(infoThisImage.StudyDate - dateTimeMerge(indicesNotNan)));
+            [minValue, indexMin] = min(abs(infoThisImage.AcqDate - dateTimeMerge(indicesNotNan)));
             infoThisImage.CDRSB = adniMergeData(indexMerge(indexMin),:).CDRSB;
     
             indicesNotNan = find(~isnan(adniMergeData(indexMerge,:).MMSE));
-            [minValue, indexMin] = min(abs(infoThisImage.StudyDate - dateTimeMerge(indicesNotNan)));
+            [minValue, indexMin] = min(abs(infoThisImage.AcqDate - dateTimeMerge(indicesNotNan)));
             infoThisImage.MMSE = adniMergeData(indexMerge(indexMin),:).MMSE;
     
             indicesNotNan = find(~isnan(adniMergeData(indexMerge,:).DIGITSCOR));
-            [minValue, indexMin] = min(abs(infoThisImage.StudyDate - dateTimeMerge(indicesNotNan)));
+            [minValue, indexMin] = min(abs(infoThisImage.AcqDate - dateTimeMerge(indicesNotNan)));
             if ~isempty(indexMin)
                 infoThisImage.DIGITSCOR = adniMergeData(indexMerge(indexMin),:).DIGITSCOR;
             else
@@ -232,7 +233,7 @@ for i = 1 : numel(fmriSubjects)
             end
     
             indicesNotNan = find(~isnan(adniMergeData(indexMerge,:).MOCA));
-            [minValue, indexMin] = min(abs(infoThisImage.StudyDate - dateTimeMerge(indicesNotNan)));
+            [minValue, indexMin] = min(abs(infoThisImage.AcqDate - dateTimeMerge(indicesNotNan)));
             if ~isempty(indexMin)
                 infoThisImage.MOCA = adniMergeData(indexMerge(indexMin),:).MOCA;
             else
@@ -240,7 +241,7 @@ for i = 1 : numel(fmriSubjects)
             end
     
             indicesNotNan = find(~isnan(adniMergeData(indexMerge,:).Ventricles));
-            [minValue, indexMin] = min(abs(infoThisImage.StudyDate - dateTimeMerge(indicesNotNan)));
+            [minValue, indexMin] = min(abs(infoThisImage.AcqDate - dateTimeMerge(indicesNotNan)));
             if ~isempty(indexMin)
                 infoThisImage.Ventricles = adniMergeData(indexMerge(indexMin),:).Ventricles;
             else
@@ -248,7 +249,7 @@ for i = 1 : numel(fmriSubjects)
             end
     
             indicesNotNan = find(~isnan(adniMergeData(indexMerge,:).Hippocampus));
-            [minValue, indexMin] = min(abs(infoThisImage.StudyDate - dateTimeMerge(indicesNotNan)));
+            [minValue, indexMin] = min(abs(infoThisImage.AcqDate - dateTimeMerge(indicesNotNan)));
             if ~isempty(indexMin)
                 infoThisImage.Hippocampus = adniMergeData(indexMerge(indexMin),:).Hippocampus;
             else
@@ -256,7 +257,7 @@ for i = 1 : numel(fmriSubjects)
             end
     
             indicesNotNan = find(~isnan(adniMergeData(indexMerge,:).WholeBrain));
-            [minValue, indexMin] = min(abs(infoThisImage.StudyDate - dateTimeMerge(indicesNotNan)));
+            [minValue, indexMin] = min(abs(infoThisImage.AcqDate - dateTimeMerge(indicesNotNan)));
             if ~isempty(indexMin)
                 infoThisImage.WholeBrain = adniMergeData(indexMerge(indexMin),:).WholeBrain;
             else
@@ -264,7 +265,7 @@ for i = 1 : numel(fmriSubjects)
             end
     
             indicesNotNan = find(~isnan(adniMergeData(indexMerge,:).MidTemp));
-            [minValue, indexMin] = min(abs(infoThisImage.StudyDate - dateTimeMerge(indicesNotNan)));
+            [minValue, indexMin] = min(abs(infoThisImage.AcqDate - dateTimeMerge(indicesNotNan)));
             if ~isempty(indexMin)
                 infoThisImage.MidTemp = adniMergeData(indexMerge(indexMin),:).MidTemp;
             else
@@ -272,14 +273,14 @@ for i = 1 : numel(fmriSubjects)
             end       
             
             indicesNotNan = find(~isnan(adniMergeData(indexMerge,:).ABETA));
-            [minValue, indexMin] = min(abs(infoThisImage.StudyDate - dateTimeMerge(indicesNotNan)));
+            [minValue, indexMin] = min(abs(infoThisImage.AcqDate - dateTimeMerge(indicesNotNan)));
             if ~isempty(indexMin)
                 infoThisImage.ABETA = adniMergeData(indexMerge(indexMin),:).ABETA;
             else
                 infoThisImage.ABETA = NaN;
             end
             indicesNotNan = find(~isnan(adniMergeData(indexMerge,:).TAU));
-            [minValue, indexMin] = min(abs(infoThisImage.StudyDate - dateTimeMerge(indicesNotNan)));
+            [minValue, indexMin] = min(abs(infoThisImage.AcqDate - dateTimeMerge(indicesNotNan)));
             if ~isempty(indexMin)
                 infoThisImage.TAU = adniMergeData(indexMerge(indexMin),:).TAU;
             else
@@ -287,7 +288,7 @@ for i = 1 : numel(fmriSubjects)
             end
     
             indicesNotNan = find(~isnan(adniMergeData(indexMerge,:).PTAU));
-            [minValue, indexMin] = min(abs(infoThisImage.StudyDate - dateTimeMerge(indicesNotNan)));
+            [minValue, indexMin] = min(abs(infoThisImage.AcqDate - dateTimeMerge(indicesNotNan)));
             if ~isempty(indexMin)
                 infoThisImage.PTAU = adniMergeData(indexMerge(indexMin),:).PTAU;
             else
@@ -317,8 +318,8 @@ writetable(infoProcessedData, fullfile(dataPath, ['SubjctsDataAndTests' atlasNam
 fullFilenameCollectionExtended = fullfile(path, [filenameCollection '_extended' ext]);
 writetable(adniCollectionData, fullFilenameCollectionExtended);
 %% STATS OF EACH CASE
-[values, channels] = hist(categorical(infoProcessedData.ResearchGroup));
-[valuesCollection, channelsCollection] = hist(categorical(adniCollectionData.ResearchGroup));
+[values, channels] = hist(categorical(infoProcessedData.Group));
+[valuesCollection, channelsCollection] = hist(categorical(adniCollectionData.Group));
 %% CHECK THE SIGNALS
 for i = 1 : numel(fmriSubjects)
     signals = load(fullfile(outputPathSignals, [suffixROIFilenames fmriSubjects(i).name '.mat']));

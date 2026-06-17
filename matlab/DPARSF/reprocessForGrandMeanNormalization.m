@@ -14,7 +14,8 @@ addpath([dataPartitionPath 'UNSAM/Brain/spm12/spm12/'])
 addpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/DPARSF/'])
 %% PREPROCESSED DATA PATH
 dataPath = '/home/martin/data_imaging/ADNIdata/fMRI_first_batch_to_process_2023_04_27/Procesadas_2mm_highpass/';
-%dataPath = '/home/martin/data_imaging/CovidProject/Estudio2/PreprocessedMRI/DPARSF/';
+dataPath = '/home/martin/data_imaging/OASIS/second_batch/OASIS_next_60CN_60AD_2026_05_26_RAW_DATA_120of120-001/OASIS_next_60CN_60AD_2026_05_26_processed/DPARSF/';
+%outputPath = '/media/martin/PortableSSD/ADNIdata/RevisionPaperfMRI_2026_04/SecondBatch/Processed/DPARSF/SIEMENS_bandpass/'
 preprocessedImageFilenames = 'Filtered_4DVolume.nii';
 preprocessedFolder = 'FunImgARWSDCF';
 outputNormalizedImageSubdir = '/FunImgARWSDCFN/';
@@ -39,7 +40,7 @@ gmMaskFilename = 'AllResampled_GreyMask_02_91x109x91.nii';
 wmMaskFilename = 'AllResampled_WhiteMask_09_91x109x91.nii';
 csfMaskFilename = 'AllResampled_CsfMask_07_91x109x91.nii';
 %% GRAND MEAN NORMALIZATION, CHECK COVERAGE AND SPATIAL ALGINMENT
-saveNormalizedImages = 0;
+saveNormalizedImages = 1;
 createNormalizedRoiSignals = 1;
 scaleMeanValue = 10000;
 maxTimePoints = 200; % FOR THE STANDARD PROTOCOL.
@@ -66,7 +67,8 @@ fmriSubjects = {fmriSubjects(3:end).name};
 % MAtrix to store all the data:
 SignalsAllSubjects = {};
 % Iterate over each preprocessed fMRI file
-for i = 1 : 10%numel(fmriSubjects)
+for i = 1 : numel(fmriSubjects)
+    i
     % Read the fMRI data
     niftiFilename = dir(fullfile(preprocessedDataPath, fmriSubjects{i}, '*.nii'));
     outputFilename = fullfile(dataPath, outputNormalizedImageSubdir, fmriSubjects{i}, preprocessedImageFilenames);

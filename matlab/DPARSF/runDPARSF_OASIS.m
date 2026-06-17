@@ -18,9 +18,8 @@ load([ProgramPath,filesep,'Jobmats',filesep,'Template_CalculateInMNISpace_Tradit
 
 
 %% NIFTI DATA PATH
-dataPath = '/home/martin/data_imaging/ADNIdata/RevisionPaperfMRI_2026_04/FourthBatch/Processed/DPARSF/GE/';
-indexScanner = 2; % Siemens=1, GE=2, Philips=3.
-subjectsInfo = '/home/martin/data_imaging/ADNIdata/RevisionPaperfMRI_2026_04/FourthBatch/RevisionPaperfMRI_2026_04_4_06_2026_FourthBatch.csv';
+dataPath = '/home/martin/data_imaging/OASIS/second_batch/OASIS_next_60CN_60AD_2026_05_26_RAW_DATA_120of120-001/OASIS_next_60CN_60AD_2026_05_26_processed/DPARSF/';
+indexScanner = 1; % Siemens=1, GE=2, Philips=3. Oasis is Siemens.
 %% CONFIG
 bandPassFilter = 1; %If not band pass, only high pass
 
@@ -42,6 +41,8 @@ startingDir = fmriNameNifti;
 overwriteNifti = 1; % If 0 won't process existing Nfiti data in the DPARSF folder
 format = '.nii.gz';
 dcmHeadersFilename = 'dcmHeaders.mat';
+% Get data to process:
+subjectNames = dir(fmriDparsfPath); subjectNames = {subjectNames(3:end).name};
 
 dparsfConfigFilenamesPerManufacturer = {[dataPartitionPath 'UNSAM/CEMSC3/ProcesamientoADNI/DPARSF/DPARSF_config_siemens.mat'], ...
     [dataPartitionPath 'UNSAM/CEMSC3/ProcesamientoADNI/DPARSF/DPARSF_config_ge.mat'],...
@@ -50,6 +51,14 @@ dparsfConfigFilenamesPerManufacturer = {[dataPartitionPath 'UNSAM/CEMSC3/Procesa
 % Load config files:
 configThisManufacturer = load(dparsfConfigFilenamesPerManufacturer{indexScanner});
 cfg = configThisManufacturer.Cfg;
+% Updaet for Oasis config (hardcoded at the moment):
+cfg.TR = 2.2;
+cfg.TimePoints = 164;
+cfg.SliceTiming.SliceNumber = 36;
+cfg.SliceTiming.TR = 2.2;
+cfg.SliceTiming.TR = cfg.SliceTiming.TR - cfg.SliceTiming.TR/cfg.SliceTiming.SliceNumber;
+cfg.SliceTiming.ReferenceSlice = 18;
+cfg.SliceTiming.SliceOrder = [2:2:cfg.SliceTiming.SliceNumber 1:2:cfg.SliceTiming.SliceNumber];
 listDir = dir(fmriDparsfPath);
 
 % Remove the high cut off of the band pass filter (high pass filter now):
@@ -114,68 +123,7 @@ cfg.IsCalVMHC=0;
 %cfg.IsAllowGUI = 0;
 % File to the AAL atlas:
 cfg.CalFC.ROIDef = {[dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/Templates/aal.nii']};
-%%
-% Get all subjects that are similar:
-for k = 1 : numel(listDir)-2
-    subjectNames{k} = listDir(k+2).name;
-    dcmTags = load([fmriDparsfPath subjectNames{k} '/dcmHeaders.mat']);
-    niftiFilesThisSubejct = fieldnames(dcmTags.h); % Get all the nifti files converted, it should be only one.
-    dcmTagsRsFmri{k} = getfield(dcmTags.h, niftiFilesThisSubejct{1});
-    image = niftiread([fmriDparsfPath subjectNames{k} '/' niftiFilesThisSubejct{1}]);
-    imageSize_voxels(k,:) = size(image);
-    timePoints(k) = imageSize_voxels(k,4);
-    numSlices(k) = imageSize_voxels(k,3);
-    fMRI_tR(k) = dcmTagsRsFmri{k}.RepetitionTime;
-    fMRI_tE(k) = dcmTagsRsFmri{k}.EchoTime;
-    %if isfield(dcmTagsRsFmri{k}, 'MosaicRefAcqTimes')
-    %    fMRI_sliceAcqTimes{k} = dcmTagsRsFmri{k}.MosaicRefAcqTimes;
-    %    fMRI_fslSliceOrcer{k} = dcmTagsRsFmri{k}.SliceTiming;
-    %    [times, fMRI_sliceOrder{k}] = sort(dcmTagsRsFmri{k}.MosaicRefAcqTimes);
-    if isfield(dcmTagsRsFmri{k}, 'SliceTiming')
-        fMRI_sliceAcqTimes{k} = (0.5 - dcmTagsRsFmri{k}.SliceTiming) * dcmTagsRsFmri{k}.RepetitionTime;
-        fMRI_fslSliceOrcer{k} = dcmTagsRsFmri{k}.SliceTiming;
-        [times, fMRI_sliceOrder{k}] = sort(fMRI_sliceAcqTimes{k});
-    end
-    %image = niftiread([niftiFilesThisSubejct{1}]);
-    info = niftiinfo([fmriDparsfPath subjectNames{k} '/' niftiFilesThisSubejct{1}]);
-    fMRI_imageSize_voxels(k,:) = info.ImageSize;
-    fMRI_voxelSize_mm(k,:) = info.PixelDimensions;
-    fMRI_inPlanePhaseEncodingDirection{k} = dcmTagsRsFmri{k}.InPlanePhaseEncodingDirection;
-    fMRI_unwarpDirection{k} = dcmTagsRsFmri{k}.UnwarpDirection;
-    if isfield(dcmTagsRsFmri{k}, 'EffectiveEPIEchoSpacing')
-        fMRI_effectiveEPIEchoSpacing(k) = dcmTagsRsFmri{k}.EffectiveEPIEchoSpacing;
-    end
-    manufacturer{k} = dcmTagsRsFmri{k}.Manufacturer;
-    model{k} = dcmTagsRsFmri{k}.ManufacturerModelName;
-end
-%% CHECK SLICE TIMING
-% Group all the subjects with the same numSlices and timePoints:
-indicesSameNumSlices = numSlices==numSlices(1);
-if sum(indicesSameNumSlices) ~= numel(subjectNames)
-    warning('Not all the images have the same number of slices.')
-end
-indicesTimePoints = timePoints==timePoints(1);
-if sum(indicesTimePoints) ~= numel(subjectNames)
-    warning('Not all the images have the same number of time points.')
-end
 
-% First check number of slices:
-indicesWrongSlices = find(numSlices ~= cfg.SliceTiming.SliceNumber);
-warning(sprintf("Subjects %s will be excluded for having a different number of slices: %d.", subjectNames{indicesWrongSlices}, numSlices(indicesWrongSlices)))
-
-subjectNames(indicesWrongSlices) = [];
-fMRI_sliceAcqTimes(indicesWrongSlices) = [];
-fMRI_sliceOrder(indicesWrongSlices) = [];
-
-sliceAcqTime = [];
-sliceOrder = [];
-if exist('fMRI_sliceAcqTimes')
-    for i = 1 : numel(fMRI_sliceAcqTimes)
-        sliceAcqTime = [sliceAcqTime vec(fMRI_sliceAcqTimes{i})];
-        sliceOrder = [sliceOrder vec(fMRI_sliceOrder{i})];
-        matchedConfigSliceOrder(i) = sum(vec(cfg.SliceTiming.SliceOrder) == vec(fMRI_sliceOrder{i})) == numel(fMRI_sliceOrder{i});
-    end
-end
 
 
 %%
@@ -184,6 +132,7 @@ batchSize = 10;
 numBatches = ceil(numel(subjectNames)./batchSize);
 % Get all subjects that are similar:
 k=0; % counts the number of subjecdts processed
+
 for i = 1 : numBatches%numel(listDir)-2
     clear subjectNamesThisBatch
     clear imageSize_voxels
@@ -204,21 +153,25 @@ for i = 1 : numBatches%numel(listDir)-2
     tic
     [Error, cfg_out{indexDir}]=DPARSFA_run(cfg);
     toc
+    % Rename realign parameter summary files:
+    movefile([dataPath '/RealignParameter/ExcludeSubjectsAccordingToMaxHeadMotion.txt'], [dataPath sprintf('/RealignParameter/ExcludeSubjectsAccordingToMaxHeadMotion_batch%d.txt',i)])
+    movefile([dataPath '/RealignParameter/HeadMotion.mat'], [dataPath sprintf('/RealignParameter/HeadMotion_batch%d.mat',i)])
+    movefile([dataPath '/RealignParameter/HeadMotion.tsv'], [dataPath sprintf('/RealignParameter/HeadMotion_batch%d.tsv',i)])
     % Free space:
+    rmdir([dataPath '/FunImgA/'],'s')
     rmdir([dataPath '/FunImgAR/'],'s')
     rmdir([dataPath '/FunImgARW/'],'s')
     rmdir([dataPath '/FunImgARWS/'],'s')
     rmdir([dataPath '/FunImgARWSD/'],'s')
+    rmdir([dataPath '/FunImgARWSDC/'],'s')
     cd(currentPath)
     k = k + min(batchSize, (numel(subjectNames)-k));
 end
 
-%[Error]=DPARSF_run(cfg);
 %% CREATE PLOTS
 %% CHECK THE IMAGES
 checkPath = fullfile(dataPath, "Check");
 mkdir(checkPath);
-tableSubjects = readtable(subjectsInfo);
 for i = 1 : numel(subjectNames)
     resultSignals = load([dataPath '/Results/ROISignals_FunImgARWSDCF/ROISignals_' subjectNames{i} '.mat']);
     roiSignals = resultSignals.ROISignals;

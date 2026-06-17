@@ -12,10 +12,10 @@ addpath([dataPartitionPath 'UNSAM/Brain/spm12/spm12/'])
 addpath([dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/DPARSF/'])
 
 %% PATHS AND FILENAMES
-overwriteNifti = 1; % If 0 won't process existing Nfiti data in the DPARSF folder
+overwriteNifti = 0; % If 0 won't process existing Nfiti data in the DPARSF folder
 format = '.nii.gz';
 dcmHeadersFilename = 'dcmHeaders.mat';
-adniPath = [adniPartitionPath '/ADNIdata/RevisionPaperfMRI_2026_04/Test/'];
+adniPath = [adniPartitionPath '/ADNIdata/RevisionPaperfMRI_2026_04/FourthBatch//'];
 dataPath = [adniPath '/ADNI/'];
 
 dparsfConfigFilenamesPerManufacturer = {['./DPARSF/configFiles/DPARSF_config_siemens.mat'], ...
@@ -32,8 +32,9 @@ if ~isdir(niftiPath)
     mkdir(niftiPath)
 end
 %% ADNI DATABASE COLLECTION
-filenameADNICollection = 'RevisionPaperfMRI_2026_04_4_06_2026.csv';
-nameRsFmriInCollectionDataBase = {'Axial rsfMRI (Eyes Open)', 'Axial fcMRI', 'Axial - Advanced fMRI'}; %{'Axial rsfMRI (Eyes Open)', 'Axial fcMRI'};
+filenameADNICollection = 'RevisionPaperfMRI_2026_04_4_06_2026_FourthBatch.csv';
+nameRsFmriInCollectionDataBase = {'Axial rsfMRI (Eyes Open)', 'Axial fcMRI', 'Axial - Advanced fMRI','Resting_State_fMRI','Axial_fcMRI__EYES_OPEN_',...
+    'Axial_RESTING_fcMRI__EYES_OPEN_', 'Axial_fcMRI__Eyes_Open_'}; %{'Axial rsfMRI (Eyes Open)', 'Axial fcMRI'};
 nameRsFmriAdvancedInCollectionDataBase = {'Axial MB rsfMRI'};%'Axial MB rsfMRI (Eyes Open)';
 % Load adni dicom collection csv:
 adniCollectionData = readtable([adniPath filenameADNICollection]);
@@ -46,7 +47,8 @@ if loadData
 end
 %% NAME SEQUENCES
 nameT1 = 't1_mprage_1x1x1';
-nameRsFmri = {'Axial_rsfMRI', 'Axial_fcMRI'};
+nameRsFmri = {'Axial rsfMRI (Eyes Open)', 'Axial fcMRI', 'Axial - Advanced fMRI','Resting_State_fMRI','Axial_fcMRI__EYES_OPEN_',...
+    'Axial_RESTING_fcMRI__EYES_OPEN_','Axial_rsfMRI', 'Axial_fcMRI'};
 nameRsFmriAdvanced = 'Axial_MB_rsfMRI';
 % nameFieldmappingMag1 = 'gre_field_mapping_2mm_e1';
 % nameFieldmappingMag2 = 'gre_field_mapping_2mm_e2';
@@ -97,18 +99,12 @@ if isempty(casesToProcess)
                 pathRsFmri{end+1} = [tempPath '/' subfolderStudy '/'];
                 % Look for the image in the collection database:
                 %% MATCH IMAGE DATA WITH IMAGE COLLECTION DATA
-                indicesMatchedName = find((strcmpi(casesToProcess{end}, adniCollectionData.Subject)) > 0); 
-                % Search for fmri sequence:
-                for j = 1 : numel(nameRsFmriInCollectionDataBase)
-                    indicesMatchedNameAndSequence = find(strncmpi(nameRsFmriInCollectionDataBase{j}, adniCollectionData.Description(indicesMatchedName), numel(nameRsFmriInCollectionDataBase{j}))>0);
-                    if ~isempty(indicesMatchedNameAndSequence)
-                        break;
-                    end
-                end
+                indicesMatchedNameAndSequence = find((strcmpi(casesToProcess{end}, adniCollectionData.Subject) & strcmpi(adniCollectionData.Modality, 'fMRI'))> 0); 
+
                 % Get the same scan as in the file:
-                indexDate = find(adniCollectionData.AcqDate(indicesMatchedName(indicesMatchedNameAndSequence)) == dateTimeThisScan);
+                indexDate = find(adniCollectionData.AcqDate(indicesMatchedNameAndSequence) == dateTimeThisScan);
                 if ~isempty(indexDate)
-                    indexThisSubjectAndDate = indicesMatchedName(indicesMatchedNameAndSequence(indexDate));
+                    indexThisSubjectAndDate = indicesMatchedNameAndSequence(indexDate);
                     if numel(indexThisSubjectAndDate) > 0 % If more than one with the same date and sequence (it can happen if downloaded more than once).
                         indexThisSubjectAndDate = indexThisSubjectAndDate(1);
                     end
@@ -255,6 +251,8 @@ for i = 1 : numel(casesToProcess)
             %copyfile([niftiPath nameT1 format], t1DparsfPathThisSubject);
             mkdir(fmriDparsfPathThisSubject);
             copyfile([niftiPathThisSubject niftiRsFmriFilenames{i} format], fmriDparsfPathThisSubject);
+            copyfile([niftiPathThisSubject dcmHeadersFilename], fmriDparsfPathThisSubject);
+            
             %mkdir(fieldmapMagDparsfPathThisSubject);
             %copyfile([niftiPath nameFieldmappingMag1 format], fieldmapMagDparsfPathThisSubject);
             %mkdir(fieldmapPhaseDparsfPathThisSubject);
@@ -300,7 +298,7 @@ for s = 1 : numel(scanners)
     dparsfThisGroupPath = fullfile(dparsfRunningPath, scanners{s}, fmriNameNifti);
     mkdir(dparsfThisGroupPath);        
     indicesSubgroup = find( (strncmp(scanners{s}, scannerManufacturer,2)) >0);
-    spm_orderSubgroup{s} =  spm_order(indicesSubgroup);
+    %spm_orderSubgroup{s} =  spm_order(indicesSubgroup);
     imageRealSizePerGroup_voxels{s} = imageRealSize_voxels(indicesSubgroup,:);
     timePointsPerGroup{s} = timePoints(indicesSubgroup);
     for i = indicesSubgroup
@@ -308,6 +306,7 @@ for s = 1 : numel(scanners)
         fmriDparsfPathThisSubject = [dparsfThisGroupPath '/' casesToProcess{i} '/'];
         mkdir(fmriDparsfPathThisSubject);
         copyfile([niftiPathThisSubject niftiRsFmriFilenames{i} format], fmriDparsfPathThisSubject);
+        copyfile([niftiPathThisSubject dcmHeadersFilename], fmriDparsfPathThisSubject);
     end
 end
 
@@ -318,10 +317,10 @@ for s = 1 : numel(scanners)
 
     indicesManufacturer = find( strncmp(scanners{s}, scannerManufacturer,2) >0);
     if ~isempty(indicesManufacturer)
-        spm_orderManufacturer{s} =  spm_order(indicesManufacturer);
+%        spm_orderManufacturer{s} =  spm_order(indicesManufacturer);
         imageRealSizeManufacturer_voxels{s} = imageRealSize_voxels(indicesManufacturer,:);
         timePointsManufacturer{s} = timePoints(indicesManufacturer);
-        sliceOrderManufacturer{s} =  sliceOrder(indicesManufacturer);
+%        sliceOrderManufacturer{s} =  sliceOrder(indicesManufacturer);
         % Check if all time points for this manufacturer are the same:
         if unique(timePointsManufacturer{s})
             timePointsPerManufacturer(s) = timePointsManufacturer{s}(1);
@@ -357,34 +356,34 @@ for s = 1 : numel(scanners)
         end
     end
 end
-%% SAVE DATA
-save([outputPath 'workspaceProcessingScript']);
-%% RUN DPARSF
+% %% SAVE DATA
+% save([outputPath 'workspaceProcessingScript']);
+% % RUN DPARSF
 % Process each folder using the respective config file.
-RunDparsf(dparsfConfigFilenamesPerManufacturer, [outputPath 'workspaceProcessingScript.mat'])
-
-%% FUNCTION TO RUN DPARSF
-function RunDparsf(dparsfConfigFilenamesPerManufacturer, workspaceFilename)
-    if nargin == 2
-        load(workspaceFilename)
-    end
-    for s = 1 : numel(scanners)
-        configThisManufacturer = load(dparsfConfigFilenamesPerManufacturer{s});
-        for g = 1 : numel(groups)
-            dparsfThisGroupBasePath = fullfile(dparsfRunningPath, scanners{s});
-            dparsfThisGroupFunPath = [dparsfThisGroupBasePath '/' fmriNameNifti '/'];
-            listDir = dir(dparsfThisGroupFunPath);
-            subjectNames = listDir(3:end); % Remove ., ..
-            configThisManufacturer.Cfg.WorkingDir = dparsfThisGroupBasePath;
-            configThisManufacturer.Cfg.DataProcessDir = dparsfThisGroupBasePath;
-            configThisManufacturer.Cfg.SubjectID = {subjectNames(:).name};
-            configThisManufacturer.Cfg.SubjectNum = numel(subjectNames);
-            configThisManufacturer.Cfg.IsNeedReorientFunImgInteractively = 0; % Do not reorient manually.
-            configThisManufacturer.Cfg.IsNeedReorientT1ImgInteractively = 0;
-            %configThisManufacturer.Cfg.IsAllowGUI = 0;
-            % File to the AAL atlas:
-            configThisManufacturer.Cfg.CalFC.ROIDef = {[dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/Templates/aal.nii']};
-            [Error]=DPARSF_run(configThisManufacturer.Cfg);
-        end
-    end
-end
+% RunDparsf(dparsfConfigFilenamesPerManufacturer, [outputPath 'workspaceProcessingScript.mat'])
+% 
+% % FUNCTION TO RUN DPARSF
+% function RunDparsf(dparsfConfigFilenamesPerManufacturer, workspaceFilename)
+%     if nargin == 2
+%         load(workspaceFilename)
+%     end
+%     for s = 1 : numel(scanners)
+%         configThisManufacturer = load(dparsfConfigFilenamesPerManufacturer{s});
+%         for g = 1 : numel(groups)
+%             dparsfThisGroupBasePath = fullfile(dparsfRunningPath, scanners{s});
+%             dparsfThisGroupFunPath = [dparsfThisGroupBasePath '/' fmriNameNifti '/'];
+%             listDir = dir(dparsfThisGroupFunPath);
+%             subjectNames = listDir(3:end); % Remove ., ..
+%             configThisManufacturer.Cfg.WorkingDir = dparsfThisGroupBasePath;
+%             configThisManufacturer.Cfg.DataProcessDir = dparsfThisGroupBasePath;
+%             configThisManufacturer.Cfg.SubjectID = {subjectNames(:).name};
+%             configThisManufacturer.Cfg.SubjectNum = numel(subjectNames);
+%             configThisManufacturer.Cfg.IsNeedReorientFunImgInteractively = 0; % Do not reorient manually.
+%             configThisManufacturer.Cfg.IsNeedReorientT1ImgInteractively = 0;
+%             configThisManufacturer.Cfg.IsAllowGUI = 0;
+%             File to the AAL atlas:
+%             configThisManufacturer.Cfg.CalFC.ROIDef = {[dataPartitionPath 'UNSAM/Brain/DPABI_V6.2_220915/Templates/aal.nii']};
+%             [Error]=DPARSF_run(configThisManufacturer.Cfg);
+%         end
+%     end
+% end
